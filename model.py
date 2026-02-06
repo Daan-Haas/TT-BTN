@@ -1,9 +1,7 @@
 import numpy as np
-import torch
-from torch import Tensor
 import matplotlib.pyplot as plt
 
-from utils import Kronecker, khatri_rao, Core, TensorTrain
+from utils import khatri_rao, Core, TensorTrain, block2outer, outer2block
 from kernels import *
 
 class BTTKM:
@@ -24,15 +22,16 @@ class BTTKM:
         self.N = 100
 
     def init_cores(self):
-        core_list = [Core(torch.rand(self.TT_ranks[i],self.dims[i],self.TT_ranks[i+1])) for i in range(self.D)]
+        core_list = [Core(np.random.rand(self.TT_ranks[i],self.dims[i],self.TT_ranks[i+1])) for i in range(self.D)]
         self.W = TensorTrain(core_list)
 
     def train(self,
               X, Y,
-              a_0=1, b_0=1,
+              a_0=1e-6, b_0=1e-6,
               c_0=None, d_0=None,
               g_0=None, h_0=None,
               error_bound=1e-4, iteration_limit=100):
+        print("Training")
         self.feature_map = self.kernel(X, self.D)
         self.N = X.shape[0]
         self.expectation_tau = a_0 / b_0
@@ -58,36 +57,27 @@ class BTTKM:
             for d in range(self.D):
                 square = [self.TT_ranks[d] * self.dims[d] * self.TT_ranks[d + 1],
                           self.TT_ranks[d] * self.dims[d] * self.TT_ranks[d + 1]]
-                if d == 0:
-                    # TODO: check reshape
-                    H_d =  self.feature_map[d].T @ khatri_rao(self.backward_accumulator_H(d), self.feature_map[d])
-                    H_d = H_d.reshape(square)
-                    G_d = khatri_rao(self.feature_map[d], self.backward_accumulator_G(d))
-                elif d == (self.D-1):
-                    H_d = khatri_rao(self.forward_accumulator_H(d), self.feature_map[d]).T @  self.feature_map[d]
-                    H_d = H_d.reshape(square)
-                    G_d = khatri_rao(self.forward_accumulator_G(d), self.feature_map[d])
-                else:
-                    H_lt = khatri_rao(self.forward_accumulator_H(d), self.feature_map[d])
-                    H_gt = khatri_rao(self.feature_map[d], self.backward_accumulator_H(d))
-                    H_d = H_lt.T @ H_gt
-                    G_lt = khatri_rao(self.forward_accumulator_G(d), self.feature_map[d])
-                    G_d = khatri_rao(G_lt, self.backward_accumulator_G(d))
 
-                mean_term = self.expectation_tau*H_d
+                H_lt = khatri_rao(self.forward_accumulator_H(d), self.feature_map[d])
+                H_gt = khatri_rao(self.feature_map[d], self.backward_accumulator_H(d))
+                H_d = H_lt.T @ H_gt
+                G_lt = khatri_rao(self.forward_accumulator_G(d), self.feature_map[d])
+                G_d = khatri_rao(G_lt, self.backward_accumulator_G(d))
+
+                mean_term = block2outer(self.expectation_tau*H_d,(self.TT_ranks[d], self.dims[d]**2))
                 lambda_mat_next = np.diag(self.lambda_R[d+1])
                 delta_mat = np.diag(self.delta[d])
                 lambda_mat_prev = np.diag(self.lambda_R[d])
-                variance_term = Kronecker(Kronecker(lambda_mat_next, delta_mat), lambda_mat_prev)
-                self.Sigma[d] = np.linalg.inv(np.add(mean_term, variance_term))
+                variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
+                # self.Sigma[d] = np.linalg.inv(np.add(mean_term, variance_term))
 
                 # TODO: use updated core for next update or not?
                 # vectorized_W = self.expectation_tau * Y @ G_d @ self.Sigma[d]
                 # core_dims = [self.TT_ranks[d], self.dims[d], self.TT_ranks[d+1]]
-                # self.W.cores[d].core = torch.tensor(vectorized_W.reshape(core_dims))
+                # self.W.cores[d].core = vectorized_W.reshape(core_dims)
                 vectorized_W.append(self.expectation_tau*Y@G_d@self.Sigma[d])
             for i, core in enumerate(self.W.cores):
-                core.core = torch.tensor(vectorized_W[i]).reshape(self.TT_ranks[i], self.dims[i], self.TT_ranks[i+1])
+                core.core = np.array(vectorized_W[i]).reshape(self.TT_ranks[i], self.dims[i], self.TT_ranks[i+1])
 
             # posterior update lambda
             for d in range(1, self.D):
@@ -97,27 +87,27 @@ class BTTKM:
                 W_unfold_1 = self.W.cores[d].unfold(1)
 
                 tensor_shape1 = (self.TT_ranks[d-1], self.dims[d-1], self.TT_ranks[d])
-                variance_tensor_prev = torch.reshape(torch.tensor(np.diag(self.Sigma[d-1])), tensor_shape1)
+                variance_tensor_prev = np.reshape(np.diag(self.Sigma[d-1]), tensor_shape1)
                 matrix_shape1 = tensor_shape1[2],tensor_shape1[1]*tensor_shape1[0]
-                variance_matrix_prev = variance_tensor_prev.permute([2,1,0]).reshape(matrix_shape1)
+                variance_matrix_prev = np.permute_dims(variance_tensor_prev, [2,1,0]).reshape(matrix_shape1)
 
-                sparsity_term1 = Kronecker(np.diag(self.delta[d-1]), np.diag(self.lambda_R[d-1]))
-                variance_term1 = variance_matrix_prev@Kronecker(self.delta[d-1], self.lambda_R[d-1])
+                sparsity_term1 = np.kron(np.diag(self.delta[d-1]), np.diag(self.lambda_R[d-1]))
+                variance_term1 = variance_matrix_prev@np.kron(self.delta[d-1], self.lambda_R[d-1])
                 expectation1 = np.add(np.diag(W_unfold_3 @ sparsity_term1 @ W_unfold_3.T), variance_term1)
 
                 tensor_shape2 = (self.TT_ranks[d], self.dims[d], self.TT_ranks[d+1])
-                variance_tensor_next = torch.reshape(torch.tensor(np.diag( self.Sigma[d])), tensor_shape2)
+                variance_tensor_next = np.reshape(np.diag( self.Sigma[d]), tensor_shape2)
                 matrix_shape2 = (tensor_shape2[2], tensor_shape2[0]*tensor_shape2[1])
                 variance_matrix_next = variance_tensor_next.permute([0,2,1]).reshape(matrix_shape2)
 
-                sparsity_term2 = Kronecker(np.diag(self.lambda_R[d+1]), np.diag(self.delta[d]))
-                variance_term2 = variance_matrix_next@Kronecker(self.lambda_R[d], self.delta[d])
+                sparsity_term2 = np.kron(np.diag(self.lambda_R[d+1]), np.diag(self.delta[d]))
+                variance_term2 = variance_matrix_next@np.kron(self.lambda_R[d], self.delta[d])
                 expectation2 = np.add(np.diag(W_unfold_1 @ sparsity_term2 @ W_unfold_1.T), variance_term2)
 
                 self.d_N[d] = np.add(d_0[d], 0.5 * (expectation1 + expectation2))
 
-            for d in range(1, self.D):
-                self.lambda_R[d] = self.c_N[d] / self.d_N[d]
+            # for d in range(1, self.D):
+            #     self.lambda_R[d] = self.c_N[d] / self.d_N[d]
 
             # posterior update delta
             for d in range(self.D):
@@ -126,16 +116,16 @@ class BTTKM:
 
                 tensor_shape = (self.TT_ranks[d], self.dims[d], self.TT_ranks[d+1])
                 matrix_shape = (tensor_shape[1], tensor_shape[0]*tensor_shape[2])
-                variance_tensor_d = torch.reshape(torch.tensor(np.diag(self.Sigma[d])), tensor_shape)
+                variance_tensor_d = np.reshape(np.diag(self.Sigma[d]), tensor_shape)
                 variance_matrix_d = variance_tensor_d.permute([1,2,0]).reshape(matrix_shape)
 
-                sparsity_term = Kronecker(np.diag(self.lambda_R[d+1]), np.diag(self.lambda_R[d]))
-                variance_term = variance_matrix_d @ Kronecker(self.lambda_R[d+1], self.lambda_R[d])
+                sparsity_term = np.kron(np.diag(self.lambda_R[d+1]), np.diag(self.lambda_R[d]))
+                variance_term = variance_matrix_d @ np.kron(self.lambda_R[d+1], self.lambda_R[d])
                 expectation = np.add(np.diag(W_unfold_2 @ sparsity_term @ W_unfold_2.T), variance_term)
                 self.h_N[d] = np.add(h_0[d], 0.5 * expectation)
 
-            for d in range(self.D):
-                self.delta[d] = self.g_N[d] / self.h_N[d]
+            # for d in range(self.D):
+            #     self.delta[d] = self.g_N[d] / self.h_N[d]
 
             # noise precision update
             self.a_N = a_0 + self.N / 2
@@ -152,18 +142,18 @@ class BTTKM:
 
             it += 1
             print(f"MSE: {errors[it]}")
-            if abs(errors[-1] - errors[-2]) < error_bound:
-                plt.plot(errors)
-                plt.show()
-                print("convergence bound reached, exiting")
-                break
+            # if abs(errors[-1] - errors[-2]) < error_bound:
+            #     plt.plot(errors)
+            #     plt.show()
+            #     print("convergence bound reached, exiting")
+            #     break
 
         if it == iteration_limit:
             print("iteration limit reached, exiting")
 
     def predict(self, X):
         self.feature_map = self.kernel(X, self.D)
-        return self.forward_accumulator_G(0)
+        return self.forward_accumulator_G(self.D)
 
     def forward_accumulator_G(self, d):
         G_k = np.ones((self.N, 1))
@@ -180,11 +170,10 @@ class BTTKM:
     def forward_accumulator_H(self, d):
         H_k = np.ones((self.N, 1))
         for k in range(d):
-            Wk = self.W.cores[k].unfold(3)
-            covariance_WW = np.cov(np.outer(Wk.reshape(-1,1), Wk.reshape(-1,1)))
-            covariance_WW = covariance_WW.reshape((self.TT_ranks[k] * self.dims[k])**2, self.TT_ranks[k+1]**2)
-            mean_WW = Kronecker(Wk, Wk)
-            mean_WW = mean_WW.reshape(((self.TT_ranks[k] * self.dims[k]))**2, self.TT_ranks[k+1]**2)
+            Wk = self.W.cores[k].unfold(3).T
+            mean_WW = np.kron(Wk, Wk)
+            block_shape = (self.TT_ranks[k]*self.TT_ranks[k+1], self.dims[k])
+            covariance_WW = outer2block(self.Sigma[k], block_shape, mean_WW.shape)
             expectation_WW = np.asarray(mean_WW + covariance_WW)
             H_k = khatri_rao(H_k, khatri_rao(self.feature_map[k], self.feature_map[k])) @ expectation_WW
         return H_k
@@ -192,11 +181,9 @@ class BTTKM:
     def backward_accumulator_H(self, d):
         H_k = np.ones((self.N, 1))
         for k in range(self.D-1, d, -1):
-            Wk = self.W.cores[k].unfold(1)
-            covariance_WW = np.cov(np.outer(Wk.reshape(-1,1), Wk.reshape(-1,1)))
-            covariance_WW = covariance_WW.reshape(((self.TT_ranks[k+1]*self.dims[k])**2, self.TT_ranks[k]**2))
-            mean_WW = Kronecker(Wk, Wk)
-            mean_WW = mean_WW.reshape(((self.TT_ranks[k+1]*self.dims[k])**2, self.TT_ranks[k]**2))
+            Wk = self.W.cores[k].unfold(1).T
+            covariance_WW = self.Sigma[k].reshape(((self.TT_ranks[k+1]*self.dims[k])**2, self.TT_ranks[k]**2))
+            mean_WW = np.kron(Wk, Wk)
             expectation_WW = np.asarray(mean_WW + covariance_WW)
             H_k = khatri_rao(H_k, khatri_rao(self.feature_map[k], self.feature_map[k])) @ expectation_WW
         return H_k

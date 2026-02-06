@@ -1,8 +1,6 @@
 import numpy as np
-import torch
 
 from numpy import ndarray
-from torch import Tensor
 
 class Core:
     def __init__(self, data):
@@ -13,19 +11,13 @@ class Core:
 
     def unfold(self, mode):
         if mode == 1:
-            shape = (self.core.size(dim=0),self.core.size(dim=1)*self.core.size(dim=2))
-            return self.core.permute([0,2,1]).reshape(shape)
+            return np.vstack([self.core[i,:,:].reshape(1,-1).flatten() for i in range(self.core.shape[0])])
         elif mode == 2:
-            shape = (self.core.size(dim=1), self.core.size(dim=0)*self.core.size(dim=2))
-            return self.core.permute([1,2,0]).reshape(shape)
+            return np.vstack([self.core[:,i,:].reshape(1,-1).flatten() for i in range(self.core.shape[1])])
         elif mode == 3:
-            shape = self.core.size(dim=2),self.core.size(dim=0)*self.core.size(dim=1)
-            return self.core.permute([2,1,0]).reshape(shape)
+            return np.vstack([self.core[:,:,i].reshape(1,-1).flatten() for i in range(self.core.shape[2])])
         else:
             raise ValueError("Unsupported mode {}, please select mode from [1,2,3]".format(mode))
-
-    def size(self, dims):
-        return self.core.size(dims)
 
 
 class TensorTrain:
@@ -34,12 +26,12 @@ class TensorTrain:
         for d in range(len(self.cores) - 1):
             if not isinstance(self.cores[d], Core):
                 raise ValueError(f"Core {d} is not a Core")
-            if self.cores[d].size(dims=2) != self.cores[d + 1].size(dims=0):
+            if self.cores[d].core.shape[2] != self.cores[d + 1].core.shape[0]:
                 raise ValueError(f"Dimensions of cores do not match, between cores {d} and {d + 1}")
 
-        self.TT_ranks = [core.size(0) for core in cores]
+        self.TT_ranks = [core.core.shape[0] for core in cores]
         self.TT_ranks.append(1)
-        self.dims = [core.size(1) for core in cores]
+        self.dims = [core.core.shape[1] for core in cores]
 
     def TT_inner(self, other):
         if not isinstance(other, TensorTrain):
@@ -72,15 +64,32 @@ def row_khatri_rao(A: ndarray, B: ndarray) -> ndarray:
     c = np.vstack([np.kron(A[k,:], B[k,:]) for k in range(A.shape[0])])
     return c
 
-def Kronecker(A: Tensor | ndarray, B: Tensor | ndarray) -> Tensor | ndarray:
-    if type(A) not in [Tensor, ndarray] or type(B) not in [Tensor, ndarray]:
-        raise TypeError('A and B must be Tensors or ndarrays')
-    if type(A) == Tensor:
-        if type(B) == ndarray:
-            B = torch.from_numpy(B)
-        return torch.kron(A, B)
-    elif type(B) == np.ndarray:
-            return np.kron(A, B)
-    else:
-        A = torch.from_numpy(A)
-        return torch.kron(A, B)
+def block2outer(A: ndarray, block_shape: tuple[int, int]) -> ndarray:
+    rows = int(np.sqrt(A.size))
+    A_shape = A.shape
+    result = np.zeros((rows, rows))
+    for i in range(int(A_shape[1]/block_shape[1])):
+        for j in range(int(A_shape[0]/block_shape[0])):
+            row_start = j*block_shape[0]
+            row_end = (j+1)*block_shape[0]
+            col_start = i*block_shape[1]
+            col_end = (i+1)*block_shape[1]
+            result[i,:] = A[row_start:row_end, col_start:col_end].reshape(1,-1).flatten()
+    return result
+
+def outer2block(A: ndarray, block_shape: tuple[int, int], output_shape: tuple[int, int]) -> ndarray:
+    result = np.zeros(output_shape)
+    col = 0
+    row = 0
+    for i in range(A.shape[0]):
+        block = A[i,:].reshape(block_shape)
+        row_start = row*block_shape[0]
+        row_end = (row+1)*block_shape[0]
+        col_start = col*block_shape[1]
+        col_end = (col+1)*block_shape[1]
+        result[row_start:row_end, col_start:col_end] = block
+        row += 1
+        if row*block_shape[0] == output_shape[0]:
+            row = 0
+            col += 1
+    return result

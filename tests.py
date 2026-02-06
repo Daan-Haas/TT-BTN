@@ -1,4 +1,3 @@
-import torch
 import math
 
 from model import *
@@ -6,7 +5,7 @@ from toy_data import *
 from utils import *
 
 def test_unfoldings():
-    A = Core(torch.tensor([[[1, 5], [2, 6]], [[3, 7], [4, 8]]]))
+    A = Core(np.array([[[1, 5], [2, 6]], [[3, 7], [4, 8]]]))
     A_unfold_1 = A.unfold(1)
     A_unfold_2 = A.unfold(2)
     A_unfold_3 = A.unfold(3)
@@ -48,9 +47,5 @@ def test_H_accumulators():
     assert(np.allclose(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1), rtol=1e-6))
 
 
-def test_kronecker():
-    pass
-
-test_unfoldings()
-test_G_accumulators()
-test_H_accumulators()
+A = Core(np.arange(1,25).reshape((2, 3, 4)))
+print(A.unfold(3).shape)

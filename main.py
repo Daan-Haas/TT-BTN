@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import torch
 
 from utils import *
 from model import *
@@ -14,12 +13,12 @@ noise_var = 0.01 # Noise variance
 D = 3 # Number of cores
 ranks = [5 for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
-dims = [I for _ in range(D)] # dimensionality of kernel
+dims = [I for _ in range(D)] # dimensionality of kerfor d in range(self.D):
 
-X_train, Y_train, X_test, Y_test, ground_truth = generate_quadratic_dataset(I, N, noise_var)
+X_train, Y_train, X_test, Y_test, ground_truth = generate_quadratic_dataset(I, N, 0)
 
 model = BTTKM(D, ranks, dims, no_kernel)
-model.train(X_train, Y_train)
+model.train(X_train, Y_train, iteration_limit=10)
 
 results = model.predict(X_test)
 

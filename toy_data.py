@@ -23,11 +23,12 @@ def generate_lin_dataset(dimensionality, number_data_points, noise_variance):
     return X_train, Y_train, X_test, Y_test, parameters
 
 def generate_quadratic_dataset(dimensionality, number_data_points, noise_variance):
+    print("generating dataset")
     X_train = np.random.uniform(-1, 1, (number_data_points, dimensionality))
     X_test = np.random.uniform(-1, 1, (number_data_points, dimensionality))
 
     ranks = [1, 3, 3, 1]
-    dims = [3, 3, 3]
+    dims = [5, 5, 5]
     model = BTTKM(3, ranks, dims, quadratic_kernel)
 
     Y_train = model.predict(X_train) + np.random.normal(0, scale=noise_variance, size=(number_data_points,1))
