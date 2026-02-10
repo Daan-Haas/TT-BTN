@@ -11,11 +11,11 @@ class Core:
 
     def unfold(self, mode):
         if mode == 1:
-            return np.vstack([self.core[i,:,:].reshape(1,-1).flatten() for i in range(self.core.shape[0])])
+            return np.vstack([self.core[i,:,:].T.reshape(1,-1).flatten() for i in range(self.core.shape[0])])
         elif mode == 2:
-            return np.vstack([self.core[:,i,:].reshape(1,-1).flatten() for i in range(self.core.shape[1])])
+            return np.vstack([self.core[:,i,:].T.reshape(1,-1).flatten() for i in range(self.core.shape[1])])
         elif mode == 3:
-            return np.vstack([self.core[:,:,i].reshape(1,-1).flatten() for i in range(self.core.shape[2])])
+            return np.vstack([self.core[:,:,i].T.reshape(1,-1).flatten() for i in range(self.core.shape[2])])
         else:
             raise ValueError("Unsupported mode {}, please select mode from [1,2,3]".format(mode))
 
@@ -54,14 +54,8 @@ def khatri_rao(A: ndarray, B: ndarray) -> ndarray:
 
     if not A.shape[0] == B.shape[0]:
         raise ValueError('A and B must have same number of rows')
-    c = np.vstack([np.kron(A[k, :], B[k, :]) for k in range(A.shape[0])])
-    return c
-
-def row_khatri_rao(A: ndarray, B: ndarray) -> ndarray:
-    A = np.asarray(A)
-    B = np.asarray(B)
-
-    c = np.vstack([np.kron(A[k,:], B[k,:]) for k in range(A.shape[0])])
+    # B kron A to maintain dimension ordering
+    c = np.vstack([np.kron(B[k, :], A[k, :]) for k in range(A.shape[0])])
     return c
 
 def block2outer(A: ndarray, block_shape: tuple[int, int]) -> ndarray:

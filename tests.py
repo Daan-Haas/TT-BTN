@@ -14,9 +14,9 @@ def test_unfoldings():
     check_unfold_2 = []
     check_unfold_3 = []
 
-    for i in range(A.core.size()[0]):
-        for j in range(A.core.size()[1]):
-            for k in range(A.core.size()[2]):
+    for i in range(A.core.shape[0]):
+        for j in range(A.core.shape[1]):
+            for k in range(A.core.shape[2]):
                 check_unfold_1.append(A.core[i, j, k] == A_unfold_1[i, ((j + 1) + k * 2) - 1])
                 check_unfold_2.append(A.core[i, j, k] == A_unfold_2[j, ((i + 1) + k * 2) - 1])
                 check_unfold_3.append(A.core[i, j, k] == A_unfold_3[k, ((i + 1) + j * 2) - 1])
@@ -25,7 +25,7 @@ def test_unfoldings():
     print(all(check_unfold_3))
 
 def test_G_accumulators():
-    D = 2  # Number of cores
+    D = 4  # Number of cores
     ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
     ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
     dims = [1 for _ in range(D)]  # dimensionality of kernel
@@ -45,7 +45,3 @@ def test_H_accumulators():
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
     assert(np.allclose(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1), rtol=1e-6))
-
-
-A = Core(np.arange(1,25).reshape((2, 3, 4)))
-print(A.unfold(3).shape)
