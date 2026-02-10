@@ -29,15 +29,6 @@ class TensorTrain:
             if self.cores[d].core.shape[2] != self.cores[d + 1].core.shape[0]:
                 raise ValueError(f"Dimensions of cores do not match, between cores {d} and {d + 1}")
 
-        self.TT_ranks = [core.core.shape[0] for core in cores]
-        self.TT_ranks.append(1)
-        self.dims = [core.core.shape[1] for core in cores]
-
-    def TT_inner(self, other):
-        if not isinstance(other, TensorTrain):
-            raise NotImplementedError
-        pass
-
 def khatri_rao(A: ndarray, B: ndarray) -> ndarray:
     """
     Khatri-Rao product (Columnwise Kronecker product)
