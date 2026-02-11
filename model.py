@@ -65,9 +65,17 @@ class BTTKM:
                 G_d = khatri_rao(G_lt, self.backward_accumulator_G(d))
 
                 mean_term = block2outer(self.expectation_tau*H_d,(self.TT_ranks[d], self.dims[d]**2))
-                lambda_mat_next = np.diag(self.lambda_R[d+1])
-                delta_mat = np.diag(self.delta[d])
-                lambda_mat_prev = np.diag(self.lambda_R[d])
+                print(mean_term)
+                if lambda_update:
+                    lambda_mat_next = np.diag(self.lambda_R[d+1])
+                    lambda_mat_prev = np.diag(self.lambda_R[d])
+                else:
+                    lambda_mat_next = np.zeros((self.TT_ranks[d+1], self.TT_ranks[d+1]))
+                    lambda_mat_prev = np.zeros((self.TT_ranks[d], self.TT_ranks[d]))
+                if delta_update:
+                    delta_mat = np.diag(self.delta[d])
+                else:
+                    delta_mat = np.zeros((self.dims[d], self.dims[d]))
                 variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
                 self.Sigma[d] = np.linalg.inv(np.add(mean_term, variance_term))
 
