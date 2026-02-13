@@ -1,7 +1,7 @@
 import numpy as np
 
 from kernels import *
-from utils import khatri_rao, Core, TensorTrain, block2outer, outer2block
+from utils import khatri_rao, Core, TensorTrain, outer2block, block2block
 
 class BTTKM:
     def __init__(self, nr_cores, ranks, dims, kernel):
@@ -64,20 +64,17 @@ class BTTKM:
                 G_lt = khatri_rao(self.forward_accumulator_G(d), self.feature_map[d])
                 G_d = khatri_rao(G_lt, self.backward_accumulator_G(d))
 
-                mean_term = block2outer(self.expectation_tau*H_d,(self.TT_ranks[d], self.dims[d]**2))
-                print(mean_term)
-                if lambda_update:
-                    lambda_mat_next = np.diag(self.lambda_R[d+1])
-                    lambda_mat_prev = np.diag(self.lambda_R[d])
-                else:
-                    lambda_mat_next = np.zeros((self.TT_ranks[d+1], self.TT_ranks[d+1]))
-                    lambda_mat_prev = np.zeros((self.TT_ranks[d], self.TT_ranks[d]))
-                if delta_update:
-                    delta_mat = np.diag(self.delta[d])
-                else:
-                    delta_mat = np.zeros((self.dims[d], self.dims[d]))
+                tensor_shape = (self.TT_ranks[d], self.TT_ranks[d], self.dims[d], self.dims[d], self.TT_ranks[d+1], self.TT_ranks[d+1])
+                mean_tensor = H_d.reshape(tensor_shape)
+                mean_tensor = np.transpose(mean_tensor, [0,2,4,1,3,5])
+                mean_mat = mean_tensor.reshape(self.TT_ranks[d]*self.dims[d]*self.TT_ranks[d+1],self.TT_ranks[d]*self.dims[d]*self.TT_ranks[d+1])
+
+                lambda_mat_next = np.diag(self.lambda_R[d+1])
+                lambda_mat_prev = np.diag(self.lambda_R[d])
+                delta_mat = np.diag(self.delta[d])
                 variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
-                self.Sigma[d] = np.linalg.inv(np.add(mean_term, variance_term))
+
+                self.Sigma[d] = np.linalg.inv(np.add(self.expectation_tau*mean_mat, variance_term))
 
                 vectorized_W.append(self.expectation_tau*Y@G_d@self.Sigma[d])
             for d, core in enumerate(self.W.cores):
@@ -178,9 +175,10 @@ class BTTKM:
         H_k = np.ones((self.N, 1))
         for k in range(d):
             Wk = self.W.cores[k].unfold(3).T
-            mean_WW = np.kron(Wk, Wk)
-            block_shape = (self.TT_ranks[k]*self.dims[k], self.TT_ranks[k+1])
-            covariance_WW = outer2block(self.Sigma[k], block_shape, mean_WW.shape)
+            mean_WW = block2block(np.kron(Wk, Wk), self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1])
+            covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1], self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1])
+            covariance_WW = np.transpose(covariance_WW, [0,3, 1,4, 2,5])
+            covariance_WW = covariance_WW.reshape((self.TT_ranks[k]*self.dims[k])**2, self.TT_ranks[k+1]**2)
             expectation_WW = np.asarray(mean_WW + covariance_WW)
             H_k = khatri_rao(H_k, khatri_rao(self.feature_map[k], self.feature_map[k])) @ expectation_WW
         return H_k
@@ -189,9 +187,10 @@ class BTTKM:
         H_k = np.ones((self.N, 1))
         for k in range(self.D-1, d, -1):
             Wk = self.W.cores[k].unfold(1).T
-            mean_WW = np.kron(Wk, Wk)
-            block_shape = (self.TT_ranks[k+1]*self.dims[k], self.TT_ranks[k])
-            covariance_WW = outer2block(self.Sigma[k], block_shape, mean_WW.shape)
+            mean_WW = block2block(np.kron(Wk, Wk), self.dims[k], self.TT_ranks[k+1], self.TT_ranks[k])
+            covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1], self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1])
+            covariance_WW = np.transpose(covariance_WW, [1,4, 2,5, 0,3])
+            covariance_WW = covariance_WW.reshape((self.dims[k]*self.TT_ranks[k+1])**2, self.TT_ranks[k]**2)
             expectation_WW = np.asarray(mean_WW + covariance_WW)
-            H_k = khatri_rao(H_k, khatri_rao(self.feature_map[k], self.feature_map[k])) @ expectation_WW
+            H_k = khatri_rao(khatri_rao(self.feature_map[k], H_k), self.feature_map[k]) @ expectation_WW
         return H_k

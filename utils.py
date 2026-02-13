@@ -78,3 +78,15 @@ def outer2block(A: ndarray, block_shape: tuple[int, int], output_shape: tuple[in
             row = 0
             col += 1
     return result
+
+def block2block(A: ndarray[float], I: int, J: int, K:int) -> ndarray[float]:
+    """
+    takes an array of size IJIJx_ and transforms it into IIJJx_
+    :param A: input array of size IJIJx_
+    :param I: first and third index to become first and second
+    :param J: second and fourth index to become third and fourth
+    :return: permuted array of size IIJJx_ with same data as A
+    """
+    tensor = A.reshape(I,J,I,J,K**2)
+    tensor = np.transpose(tensor,(0,2,1,3,4))
+    return tensor.reshape(I*I*J*J,K**2)

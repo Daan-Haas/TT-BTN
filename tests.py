@@ -66,5 +66,3 @@ def tensorize_vector():
     A_permute = np.permute_dims(A.reshape((4,3,2)), [2,1,0])
     print(f'A_211 element without permute: {A_no_permute[1,0,0]}')
     print(f'A_211 element with permute: {A_permute[1,0,0]}')
-
-tensorize_vector()
