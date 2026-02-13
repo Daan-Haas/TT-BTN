@@ -11,11 +11,11 @@ class Core:
 
     def unfold(self, mode):
         if mode == 1:
-            return np.vstack([self.core[i,:,:].reshape(1,-1).flatten() for i in range(self.core.shape[0])])
+            return np.vstack([self.core[i,:,:].reshape(1,-1).flatten() for i in range(self.core.shape[0])]) # R_d x M_d R_{d+1}
         elif mode == 2:
-            return np.vstack([self.core[:,i,:].T.reshape(1,-1).flatten() for i in range(self.core.shape[1])])
+            return np.vstack([self.core[:,i,:].T.reshape(1,-1).flatten() for i in range(self.core.shape[1])]) # M_d x R_d R_{d+1}
         elif mode == 3:
-            return np.vstack([self.core[:,:,i].T.reshape(1,-1).flatten() for i in range(self.core.shape[2])])
+            return np.vstack([self.core[:,:,i].T.reshape(1,-1).flatten() for i in range(self.core.shape[2])]) # R_{d+1} x R_d M_d
         else:
             raise ValueError("Unsupported mode {}, please select mode from [1,2,3]".format(mode))
 
