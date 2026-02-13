@@ -62,23 +62,6 @@ def block2outer(A: ndarray, block_shape: tuple[int, int]) -> ndarray:
             result[i,:] = A[row_start:row_end, col_start:col_end].reshape(1,-1).flatten()
     return result
 
-def outer2block(A: ndarray, block_shape: tuple[int, int], output_shape: tuple[int, int]) -> ndarray:
-    result = np.zeros(output_shape)
-    col = 0
-    row = 0
-    for i in range(A.shape[0]):
-        block = A[i,:].reshape(block_shape)
-        row_start = row*block_shape[0]
-        row_end = (row+1)*block_shape[0]
-        col_start = col*block_shape[1]
-        col_end = (col+1)*block_shape[1]
-        result[row_start:row_end, col_start:col_end] = block
-        row += 1
-        if row*block_shape[0] == output_shape[0]:
-            row = 0
-            col += 1
-    return result
-
 def block2block(A: ndarray[float], I: int, J: int, K:int) -> ndarray[float]:
     """
     takes an array of size IJIJx_ and transforms it into IIJJx_
