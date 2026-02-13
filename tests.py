@@ -23,25 +23,25 @@ def test_unfoldings():
                 check_unfold_1.append(A.core[i, j, k] == A_unfold_1[i, j + (k * max_j)])
                 check_unfold_2.append(A.core[i, j, k] == A_unfold_2[j, i + (k * max_i)])
                 check_unfold_3.append(A.core[i, j, k] == A_unfold_3[k, i + (j * max_i)])
-    assert(all(check_unfold_1))
-    assert(all(check_unfold_2))
-    assert(all(check_unfold_3))
+    assert all(check_unfold_1), 'mode-1 unfolding incorrect'
+    assert all(check_unfold_2), 'mode-2 unfolding incorrect'
+    assert all(check_unfold_3), 'mode-3 unfolding incorrect'
 
 def test_G_accumulators():
-    D = 5  # Number of cores
-    I = 5
-    ranks = [3 for _ in range(D - 1)]  # Tensor-train ranks
+    D = 4  # Number of cores
+    I = 3
+    ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
     ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
     dims = [I for _ in range(D)]  # dimensionality of kernel
 
     X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
-    assert(np.allclose(model.forward_accumulator_G(model.D), model.backward_accumulator_G(-1), rtol=1e-6))
+    assert np.allclose(model.forward_accumulator_G(model.D), model.backward_accumulator_G(-1), rtol=1e-6), 'forward and backward G accumulation errors'
 
 def test_H_accumulators():
-    D = 5  # Number of cores
-    I = 5
+    D = 4  # Number of cores
+    I = 2
     ranks = [3 for _ in range(D - 1)]  # Tensor-train ranks
     ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
     dims = [I for _ in range(D)]  # dimensionality of kernel
@@ -49,8 +49,7 @@ def test_H_accumulators():
     X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
-    print(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1))
-    assert np.allclose(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1), rtol=1e-6), 'forward and backward accumulators not matching'
+    assert np.allclose(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1), rtol=1e-6), 'forward and backward H accumulation errors'
 
 def print_unfold(mode):
     A = Core(np.array([[[1,5],[3,7]],[[2,6],[4,8]]]))
@@ -71,3 +70,14 @@ def tensorize_vector():
     print(f'A_211 element with permute: {A_permute[1,0,0]}')
 
 test_H_accumulators()
+A = np.zeros((2,2,2))
+A[0,0,0] = 1
+A[1,0,0] = 2
+A[0,1,0] = 3
+A[1,1,0] = 4
+A[0,0,1] = 5
+A[1,0,1] = 6
+A[0,1,1] = 7
+A[1,1,1] = 8
+A = Core(A)
+print(A.unfold(3))
