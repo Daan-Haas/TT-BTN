@@ -1,7 +1,7 @@
 import numpy as np
 
 from kernels import *
-from utils import khatri_rao, Core, TensorTrain, outer2block, block2block
+from utils import khatri_rao, Core, TensorTrain, block2block
 
 class BTTKM:
     def __init__(self, nr_cores, ranks, dims, kernel):
