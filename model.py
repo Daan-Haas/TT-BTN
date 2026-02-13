@@ -180,17 +180,19 @@ class BTTKM:
             covariance_WW = np.transpose(covariance_WW, [0,3, 1,4, 2,5])
             covariance_WW = covariance_WW.reshape((self.TT_ranks[k]*self.dims[k])**2, self.TT_ranks[k+1]**2)
             expectation_WW = np.asarray(mean_WW + covariance_WW)
-            H_k = khatri_rao(H_k, khatri_rao(self.feature_map[k], self.feature_map[k])) @ expectation_WW
+            H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW
         return H_k
 
     def backward_accumulator_H(self, d):
         H_k = np.ones((self.N, 1))
         for k in range(self.D-1, d, -1):
             Wk = self.W.cores[k].unfold(1).T
-            mean_WW = block2block(np.kron(Wk, Wk), self.dims[k], self.TT_ranks[k+1], self.TT_ranks[k])
+            mean_WW = np.kron(Wk, Wk).reshape(self.TT_ranks[k+1], self.dims[k], self.TT_ranks[k+1], self.dims[k], self.TT_ranks[k]**2)
+            mean_WW = np.transpose(mean_WW, [1,3,0,2,4])
+            mean_WW = mean_WW.reshape((self.TT_ranks[k+1]*self.dims[k])**2, self.TT_ranks[k]**2)
             covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1], self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1])
             covariance_WW = np.transpose(covariance_WW, [1,4, 2,5, 0,3])
             covariance_WW = covariance_WW.reshape((self.dims[k]*self.TT_ranks[k+1])**2, self.TT_ranks[k]**2)
             expectation_WW = np.asarray(mean_WW + covariance_WW)
-            H_k = khatri_rao(khatri_rao(self.feature_map[k], H_k), self.feature_map[k]) @ expectation_WW
+            H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW
         return H_k

@@ -23,31 +23,34 @@ def test_unfoldings():
                 check_unfold_1.append(A.core[i, j, k] == A_unfold_1[i, j + (k * max_j)])
                 check_unfold_2.append(A.core[i, j, k] == A_unfold_2[j, i + (k * max_i)])
                 check_unfold_3.append(A.core[i, j, k] == A_unfold_3[k, i + (j * max_i)])
-    print(all(check_unfold_1))
-    print(all(check_unfold_2))
-    print(all(check_unfold_3))
+    assert(all(check_unfold_1))
+    assert(all(check_unfold_2))
+    assert(all(check_unfold_3))
 
 def test_G_accumulators():
-    D = 4  # Number of cores
-    ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
+    D = 5  # Number of cores
+    I = 5
+    ranks = [3 for _ in range(D - 1)]  # Tensor-train ranks
     ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
-    dims = [1 for _ in range(D)]  # dimensionality of kernel
+    dims = [I for _ in range(D)]  # dimensionality of kernel
 
-    X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(1, 10, 0)
+    X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
     assert(np.allclose(model.forward_accumulator_G(model.D), model.backward_accumulator_G(-1), rtol=1e-6))
 
 def test_H_accumulators():
-    D = 2  # Number of cores
-    ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
+    D = 5  # Number of cores
+    I = 5
+    ranks = [3 for _ in range(D - 1)]  # Tensor-train ranks
     ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
-    dims = [1 for _ in range(D)]  # dimensionality of kernel
+    dims = [I for _ in range(D)]  # dimensionality of kernel
 
-    X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(1, 10, 0)
+    X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
-    assert(np.allclose(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1), rtol=1e-6))
+    print(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1))
+    assert np.allclose(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1), rtol=1e-6), 'forward and backward accumulators not matching'
 
 def print_unfold(mode):
     A = Core(np.array([[[1,5],[3,7]],[[2,6],[4,8]]]))
@@ -66,3 +69,5 @@ def tensorize_vector():
     A_permute = np.permute_dims(A.reshape((4,3,2)), [2,1,0])
     print(f'A_211 element without permute: {A_no_permute[1,0,0]}')
     print(f'A_211 element with permute: {A_permute[1,0,0]}')
+
+test_H_accumulators()

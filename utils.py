@@ -11,7 +11,7 @@ class Core:
 
     def unfold(self, mode):
         if mode == 1:
-            return np.vstack([self.core[i,:,:].T.reshape(1,-1).flatten() for i in range(self.core.shape[0])])
+            return np.vstack([self.core[i,:,:].reshape(1,-1).flatten() for i in range(self.core.shape[0])])
         elif mode == 2:
             return np.vstack([self.core[:,i,:].T.reshape(1,-1).flatten() for i in range(self.core.shape[1])])
         elif mode == 3:
@@ -48,19 +48,6 @@ def khatri_rao(A: ndarray, B: ndarray) -> ndarray:
     # B kron A to maintain dimension ordering
     c = np.vstack([np.kron(B[k, :], A[k, :]) for k in range(A.shape[0])])
     return c
-
-def block2outer(A: ndarray, block_shape: tuple[int, int]) -> ndarray:
-    rows = int(np.sqrt(A.size))
-    A_shape = A.shape
-    result = np.zeros((rows, rows))
-    for i in range(int(A_shape[1]/block_shape[1])):
-        for j in range(int(A_shape[0]/block_shape[0])):
-            row_start = j*block_shape[0]
-            row_end = (j+1)*block_shape[0]
-            col_start = i*block_shape[1]
-            col_end = (i+1)*block_shape[1]
-            result[i,:] = A[row_start:row_end, col_start:col_end].reshape(1,-1).flatten()
-    return result
 
 def block2block(A: ndarray[float], I: int, J: int, K:int) -> ndarray[float]:
     """

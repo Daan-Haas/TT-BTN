@@ -27,7 +27,7 @@ def generate_quadratic_dataset(dimensionality, number_data_points, noise_varianc
     X_train = np.random.uniform(-1, 1, (number_data_points, dimensionality))
     X_test = np.random.uniform(-1, 1, (number_data_points, dimensionality))
 
-    ranks = [1, 3, 3, 1]
+    ranks = [1, 5, 5, 1]
     dims = [5, 5, 5]
     model = BTTKM(3, ranks, dims, quadratic_kernel)
 

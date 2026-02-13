@@ -18,7 +18,7 @@ dims = [I for _ in range(D)] # dimensionality of kernels
 X_train, Y_train, X_test, Y_test, ground_truth = generate_quadratic_dataset(I, N, 0)
 
 model = BTTKM(D, ranks, dims, no_kernel)
-model.train(X_train, Y_train, iteration_limit=2)
+model.train(X_train, Y_train, iteration_limit=20)
 
 results = model.predict(X_test)
 
