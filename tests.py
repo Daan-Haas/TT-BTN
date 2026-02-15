@@ -49,6 +49,8 @@ def test_H_accumulators():
     X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
+
+    print(model.forward_accumulator_H(model.D) - model.backward_accumulator_H(-1))
     assert np.allclose(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1), rtol=1e-6), 'forward and backward H accumulation errors'
 
 def print_unfold(mode):
