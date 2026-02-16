@@ -49,7 +49,49 @@ def test_H_accumulators():
     X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
+    print(model.forward_accumulator_H(model.D) - model.backward_accumulator_H(-1))
     assert np.allclose(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1), rtol=1e-6), 'forward and backward H accumulation errors'
+
+def test_H_forward_against_G():
+    D = 3  # Number of cores
+    I = 2
+    ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
+    ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
+    dims = [I for _ in range(D)]  # dimensionality of kernel
+
+    X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
+    model = BTTKM(D, ranks, dims, no_kernel)
+    model.train(X_train, Y_train, iteration_limit=0)
+    G_lt = khatri_rao(model.forward_accumulator_G(model.D), model.feature_map[model.D-1])
+    G = khatri_rao(G_lt, model.backward_accumulator_G(model.D))
+    GTG = G.T @ G
+
+    H_lt = khatri_rao(model.forward_accumulator_H(model.D), model.feature_map[model.D-1])
+    H_gt = khatri_rao(model.feature_map[model.D-1], model.backward_accumulator_H(model.D))
+    H_D = H_lt.T @ H_gt
+
+    print(GTG, H_D)
+    assert all(GTG == H_D), "GTG does not match forward accumulator H"
+
+def test_H_backward_against_G():
+    D = 3  # Number of cores
+    I = 2
+    ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
+    ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
+    dims = [I for _ in range(D)]  # dimensionality of kernel
+
+    X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
+    model = BTTKM(D, ranks, dims, no_kernel)
+    model.train(X_train, Y_train, iteration_limit=0)
+    G_lt = khatri_rao(model.forward_accumulator_G(-1), model.feature_map[0])
+    G = khatri_rao(G_lt, model.backward_accumulator_G(-1))
+    GTG = G.T @ G
+
+    H_lt = khatri_rao(model.forward_accumulator_H(-1), model.feature_map[model.D-1])
+    H_gt = khatri_rao(model.feature_map[0], model.backward_accumulator_H(-1))
+    H_D = H_lt.T @ H_gt
+
+    assert np.allclose(GTG, H_D), "GTG does not match backward accumulator H"
 
 def print_unfold(mode):
     A = Core(np.array([[[1,5],[3,7]],[[2,6],[4,8]]]))
@@ -69,15 +111,22 @@ def tensorize_vector():
     print(f'A_211 element without permute: {A_no_permute[1,0,0]}')
     print(f'A_211 element with permute: {A_permute[1,0,0]}')
 
-test_H_accumulators()
-A = np.zeros((2,2,2))
-A[0,0,0] = 1
-A[1,0,0] = 2
-A[0,1,0] = 3
-A[1,1,0] = 4
-A[0,0,1] = 5
-A[1,0,1] = 6
-A[0,1,1] = 7
-A[1,1,1] = 8
-A = Core(A)
-print(A.unfold(3))
+def forward_step_by_step():
+    D = 3  # Number of cores
+    I = 2
+    ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
+    ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
+    dims = [I for _ in range(D)]  # dimensionality of kernel
+
+    X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 2, 0)
+    model = BTTKM(D, ranks, dims, no_kernel)
+    model.train(X_train, Y_train, iteration_limit=0)
+    model.W.cores[0] = Core(np.array([[[1,3],[2,4]]]))
+    model.W.cores[1] = Core(np.array([[[5,9],[7,11]],[[6, 10], [8,12]]]))
+    model.W.cores[2] = Core(np.array([[[13],[15]],[[14],[16]]]))
+
+    model.feature_map[0] = np.array([[1,3],[2,4]])
+    model.feature_map[1] = np.array([[1,3],[2,4]])
+    model.feature_map[2] = np.array([[1,3],[2,4]])
+    model.forward_accumulator_H(1)
+forward_step_by_step()
