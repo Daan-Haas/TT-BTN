@@ -1,7 +1,7 @@
 import numpy as np
 
 from kernels import *
-from utils import khatri_rao, Core, TensorTrain, block2block
+from utils import khatri_rao, Core, TensorTrain
 
 class BTTKM:
     def __init__(self, nr_cores, ranks, dims, kernel):
@@ -176,18 +176,20 @@ class BTTKM:
         for k in range(d):
             Wk = self.W.cores[k].unfold(3).T # R_d M_d x R_{d+1}
             mean_WW = np.kron(Wk, Wk) # R_d M_d R_d M_d x R_{d+1} R_{d+1}
-            mean_WW = mean_WW.reshape(self.TT_ranks[k],self.dims[k],self.TT_ranks[k],self.dims[k],self.TT_ranks[k+1]**2)
+            mean_WW = mean_WW.reshape([self.TT_ranks[k],self.dims[k],self.TT_ranks[k],self.dims[k],self.TT_ranks[k+1]**2], order='F')
             # R_d x M_d x R_d x M_d x R_{d+1} R_{d+1}
             mean_WW = np.transpose(mean_WW,(0,2,1,3,4)) # R_d x R_d x M_d x M_d x R_{d+1}**2
-            mean_WW = mean_WW.reshape((self.TT_ranks[k]*self.dims[k])**2, self.TT_ranks[k+1]**2)
+            print(mean_WW[0,0,1,0,0])
+            mean_WW = mean_WW.reshape([(self.TT_ranks[k]*self.dims[k])**2, self.TT_ranks[k+1]**2], order='F')
             # R_d R_d M_d M_d x R_{d+1}**2
 
             covariance_shape = (self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1], self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1])
-            covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(covariance_shape) # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
+            covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(covariance_shape, order='F') # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
             covariance_WW = np.transpose(covariance_WW, [0,3, 1,4, 2,5]) # R_d x R_d x M_d x M_d x R_{d+1} x R_{d+1}
-            covariance_WW = covariance_WW.reshape((self.TT_ranks[k]*self.dims[k])**2, self.TT_ranks[k+1]**2)
+            covariance_WW = covariance_WW.reshape([(self.TT_ranks[k]*self.dims[k])**2, self.TT_ranks[k+1]**2], order='F')
             # R_d R_d M_d M_d x R_{d+1} R_{d+1}
-            expectation_WW = np.asarray(mean_WW + covariance_WW) # R_d R_d M_d M_d x R_{d+1} R_{d+1}
+            # expectation_WW = np.add(mean_WW, covariance_WW) # R_d R_d M_d M_d x R_{d+1} R_{d+1}
+            expectation_WW = mean_WW
 
             # (N xM_d M_d R_d R_d)(R_d R_d M_d M_d x R_{d+1} R_{d+1})
             H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW
@@ -197,19 +199,19 @@ class BTTKM:
         H_k = np.ones((self.N, 1))
         for k in range(self.D-1, d, -1):
             Wk = self.W.cores[k].unfold(1).T # R_{d+1} M_d x R_d
-            mean_WW = np.kron(Wk, Wk).reshape(self.TT_ranks[k+1], self.dims[k], self.TT_ranks[k+1], self.dims[k], self.TT_ranks[k]**2)
+            mean_WW = np.kron(Wk, Wk).reshape([self.TT_ranks[k+1], self.dims[k], self.TT_ranks[k+1], self.dims[k], self.TT_ranks[k]**2], order='F')
             # R_{d+1} x M_d x R_{d+1} x M_d x R_d**2
             mean_WW = np.transpose(mean_WW, [1,3,0,2,4]) # M_d x M_d x R_{d+1} x R_{d+1} x R_d**2
-            mean_WW = mean_WW.reshape((self.TT_ranks[k+1]*self.dims[k])**2, self.TT_ranks[k]**2)
+            mean_WW = mean_WW.reshape([(self.TT_ranks[k+1]*self.dims[k])**2, self.TT_ranks[k]**2], order='F')
             # M_d M_d R_{d+1} R_{d+1} x R_d**2
 
             covariance_shape = (self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1], self.TT_ranks[k], self.dims[k], self.TT_ranks[k+1])
-            covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(covariance_shape) # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
+            covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(covariance_shape, order='F') # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
             covariance_WW = np.transpose(covariance_WW, [1,4, 2,5, 0,3]) # M_d x M_d x R_{d+1} x R_{d+1} x R_d x R_d
-            covariance_WW = covariance_WW.reshape((self.dims[k]*self.TT_ranks[k+1])**2, self.TT_ranks[k]**2)
+            covariance_WW = covariance_WW.reshape([(self.dims[k]*self.TT_ranks[k+1])**2, self.TT_ranks[k]**2], order='F')
             # M_d M_d R_{d+1} R_{d+1} x R_d R_d
-            expectation_WW = np.asarray(mean_WW + covariance_WW)# M_d M_d R_{d+1} R_{d+1} x R_d R_d
-
+            # expectation_WW = np.add(mean_WW, covariance_WW)# M_d M_d R_{d+1} R_{d+1} x R_d R_d
+            expectation_WW = mean_WW
             # (N x M_d M_d R_{d+1} R_{d+1})(M_d M_d R_{d+1} R_{d+1} x R_d R_d)
             H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW
         return H_k # N x R_d**2

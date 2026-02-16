@@ -48,15 +48,3 @@ def khatri_rao(A: ndarray, B: ndarray) -> ndarray:
     # B kron A to maintain dimension ordering
     c = np.vstack([np.kron(B[k, :], A[k, :]) for k in range(A.shape[0])])
     return c
-
-def block2block(A: ndarray[float], I: int, J: int, K:int) -> ndarray[float]:
-    """
-    takes an array of size IJIJx_ and transforms it into IIJJx_
-    :param A: input array of size IJIJx_
-    :param I: first and third index to become first and second
-    :param J: second and fourth index to become third and fourth
-    :return: permuted array of size IIJJx_ with same data as A
-    """
-    tensor = A.reshape(I,J,I,J,K**2)
-    tensor = np.transpose(tensor,(0,2,1,3,4))
-    return tensor.reshape(I*I*J*J,K**2)
