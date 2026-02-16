@@ -11,7 +11,7 @@ class Core:
 
     def unfold(self, mode):
         if mode == 1:
-            return np.vstack([self.core[i,:,:].reshape(1,-1).flatten() for i in range(self.core.shape[0])]) # R_d x M_d R_{d+1}
+            return np.vstack([self.core[i,:,:].reshape(1,-1).flatten() for i in range(self.core.shape[0])]) # R_d x R_{d+1} M_d
         elif mode == 2:
             return np.vstack([self.core[:,i,:].T.reshape(1,-1).flatten() for i in range(self.core.shape[1])]) # M_d x R_d R_{d+1}
         elif mode == 3:
