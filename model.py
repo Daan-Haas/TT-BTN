@@ -196,9 +196,9 @@ class BTTKM:
     def backward_accumulator_H(self, d):
         H_k = np.ones((self.N, 1))
         for k in range(self.D-1, d, -1):
-            Wk = self.W.cores[k].unfold(1).T # M_d R_{d+1} x R_d
+            Wk = self.W.cores[k].unfold(1).T # R_{d+1} M_d x R_d
             mean_WW = np.kron(Wk, Wk).reshape(self.TT_ranks[k+1], self.dims[k], self.TT_ranks[k+1], self.dims[k], self.TT_ranks[k]**2)
-            # M_d x R_{d+1} x M_d x R_{d+1} x R_d**2
+            # R_{d+1} x M_d x R_{d+1} x M_d x R_d**2
             mean_WW = np.transpose(mean_WW, [1,3,0,2,4]) # M_d x M_d x R_{d+1} x R_{d+1} x R_d**2
             mean_WW = mean_WW.reshape((self.TT_ranks[k+1]*self.dims[k])**2, self.TT_ranks[k]**2)
             # M_d M_d R_{d+1} R_{d+1} x R_d**2
@@ -208,8 +208,8 @@ class BTTKM:
             covariance_WW = np.transpose(covariance_WW, [1,4, 2,5, 0,3]) # M_d x M_d x R_{d+1} x R_{d+1} x R_d x R_d
             covariance_WW = covariance_WW.reshape((self.dims[k]*self.TT_ranks[k+1])**2, self.TT_ranks[k]**2)
             # M_d M_d R_{d+1} R_{d+1} x R_d R_d
-            expectation_WW = np.asarray(mean_WW + covariance_WW)# R_{d+1} R_{d+1} M_d M_d x R_d R_d
+            expectation_WW = np.asarray(mean_WW + covariance_WW)# M_d M_d R_{d+1} R_{d+1} x R_d R_d
 
-            # (N x M_d M_d R_{d+1} R_{d+1})(R_{d+1} R_{d+1} M_d M_d x R_d R_d)
+            # (N x M_d M_d R_{d+1} R_{d+1})(M_d M_d R_{d+1} R_{d+1} x R_d R_d)
             H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW
         return H_k # N x R_d**2
