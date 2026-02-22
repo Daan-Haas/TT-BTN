@@ -52,6 +52,9 @@ def test_H_accumulators():
     assert np.allclose(model.forward_accumulator_H(model.D), model.backward_accumulator_H(-1), rtol=1e-6), 'forward and backward H accumulation errors'
 
 def test_H_forward_against_G():
+    """
+    Will fail when covariance in accumulators
+    """
     D = 3  # Number of cores
     I = 2
     ranks = [3 for _ in range(D - 1)]  # Tensor-train ranks
@@ -78,6 +81,9 @@ def test_H_forward_against_G():
     assert np.allclose(GTG, H_d), "GTG does not match forward accumulator H"
 
 def test_H_backward_against_G():
+    """
+    Will fail when covariance in accumulators
+    """
     D = 3  # Number of cores
     I = 2
     ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
@@ -102,28 +108,32 @@ def test_H_backward_against_G():
     assert np.allclose(GTG, H_d), "GTG does not match backward accumulator H"
 
 def test_H_against_G_all_cores():
-    D = 3  # Number of cores
-    I = 3
-    ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
-    ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
-    dims = [I for _ in range(D)]  # dimensionality of kernel
+    """
+    Will fail when covariance in accumulators
+    """
+    for D in range(2,7): # Number of cores
+        for I in range(1, 5): # dimensionallity
+            for TT_rank in range(1,5):
+                ranks = [TT_rank for _ in range(D - 1)]  # Tensor-train ranks
+                ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
+                dims = [I for _ in range(D)]  # dimensionality of kernel
 
-    X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
-    model = BTTKM(D, ranks, dims, no_kernel)
-    model.train(X_train, Y_train, iteration_limit=0)
+                X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 10, 0)
+                model = BTTKM(D, ranks, dims, no_kernel)
+                model.train(X_train, Y_train, iteration_limit=0)
 
-    for d in range(D):
-        G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d]) # N x R_{d+1} M_d
-        G = khatri_rao(G_lt, model.backward_accumulator_G(d)) # N x R_{d+1} M_d R_d
-        GTG = G.T @ G
-        H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d]) # N x R_{d+1}**2 M_d
-        H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d)) # N x M_d R_d**2
-        H_d = H_lt.T @ H_gt # R_{d+1}**2 M_d x M_d R_d**2
-        H_d = H_d.reshape([model.R[d], model.R[d], model.M[d], model.M[d], model.R[d+1], model.R[d+1]], order='F')
-        H_d = H_d.transpose([4, 2, 0, 5, 3, 1])
-        H_d = H_d.reshape([model.R[d]*model.M[d]*model.R[d+1], model.R[d]*model.M[d]*model.R[d+1]], order='C')
+                for d in range(D):
+                    G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d]) # N x R_{d+1} M_d
+                    G = khatri_rao(G_lt, model.backward_accumulator_G(d)) # N x R_{d+1} M_d R_d
+                    GTG = G.T @ G
+                    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d]) # N x R_{d+1}**2 M_d
+                    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d)) # N x M_d R_d**2
+                    H_d = H_lt.T @ H_gt # R_{d+1}**2 M_d x M_d R_d**2
+                    H_d = H_d.reshape([model.R[d], model.R[d], model.M[d], model.M[d], model.R[d+1], model.R[d+1]], order='F')
+                    H_d = H_d.transpose([4, 2, 0, 5, 3, 1])
+                    H_d = H_d.reshape([model.R[d]*model.M[d]*model.R[d+1], model.R[d]*model.M[d]*model.R[d+1]], order='C')
 
-        assert np.allclose(GTG, H_d), f"GTG does not match H for d={d}"
+                    assert np.allclose(GTG, H_d), f"GTG does not match H for d={d}"
     print("all cores match")
 
 def print_unfold(mode):
@@ -145,6 +155,9 @@ def tensorize_vector():
     print(f'A_211 element with permute: {A_permute[1,0,0]}')
 
 def forward_step_by_step():
+    """
+    Will fail when covariance in accumulators
+    """
     D = 3  # Number of cores
     I = 2
     ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
@@ -164,6 +177,9 @@ def forward_step_by_step():
     model.forward_accumulator_H(3)
 
 def backward_step_by_step():
+    """
+    Will fail when covariance in accumulators
+    """
     D = 3  # Number of cores
     I = 2
     ranks = [3 for _ in range(D - 1)]  # Tensor-train ranks
@@ -200,7 +216,11 @@ def backward_step_by_step():
                           order='C')
 
         assert np.allclose(GTG, H_d), "GTG and H do not match"
-backward_step_by_step()
+
+# backward_step_by_step()
 test_H_backward_against_G()
 test_H_forward_against_G()
 test_H_against_G_all_cores()
+
+tmp = np.array(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'])
+print(tmp.reshape(2,3,2))
