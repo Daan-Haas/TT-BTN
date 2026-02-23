@@ -66,18 +66,17 @@ def test_H_forward_against_G():
     model.train(X_train, Y_train, iteration_limit=0)
 
     d = model.D - 1
-    G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d])
-    G = khatri_rao(G_lt, model.backward_accumulator_G(d))
+    G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d])  # N x M_d R_{d+1}
+    G = khatri_rao(G_lt, model.backward_accumulator_G(d))  # N x R_d M_d R_{d+1}
     GTG = G.T @ G
 
-    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d]) # N x R_{d+1}**2 M_d
-    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d)) #  N x M_d R_d**2
-    H_d = H_lt.T @ H_gt # R_{d+1} R_{d+1} M_d x M_d R_d R_d
-    H_d = H_d.reshape([model.R[d], model.R[d], model.M[d], model.M[d], model.R[d+1], model.R[d+1]], order='F')
-
-    H_d = H_d.transpose([4, 2, 0, 5, 3, 1])
-    H_d = H_d.reshape([model.R[d]*model.M[d]*model.R[d+1], model.R[d]*model.M[d]*model.R[d+1]], order='C')
-
+    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d])  # N x M_d R_{d+1} R_d{+1}
+    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d))  # N x R_d R_d M_d
+    H_d = H_lt.T @ H_gt  # M_d R_{d+1} R_{d+1} R_d R_d M_d
+    H_d = H_d.reshape([model.M[d], model.R[d + 1], model.R[d + 1], model.R[d], model.R[d], model.M[d]], order='F')
+    H_d = H_d.transpose([3, 0, 1, 4, 5, 2])
+    H_d = H_d.reshape([model.R[d] * model.M[d] * model.R[d + 1], model.R[d] * model.M[d] * model.R[d + 1]])
+    print(GTG, H_d)
     assert np.allclose(GTG, H_d), "GTG does not match forward accumulator H"
 
 def test_H_backward_against_G():
@@ -86,7 +85,7 @@ def test_H_backward_against_G():
     """
     D = 3  # Number of cores
     I = 2
-    ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
+    ranks = [3 for _ in range(D - 1)]  # Tensor-train ranks
     ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
     dims = [I for _ in range(D)]  # dimensionality of kernel
 
@@ -95,16 +94,16 @@ def test_H_backward_against_G():
     model.train(X_train, Y_train, iteration_limit=0)
 
     d = 0
-    G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d])
-    G = khatri_rao(G_lt, model.backward_accumulator_G(d))
+    G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d])  # N x M_d R_{d+1}
+    G = khatri_rao(G_lt, model.backward_accumulator_G(d))  # N x R_d M_d R_{d+1}
     GTG = G.T @ G
 
-    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d]) # N x R_{d+1}**2 M_d
-    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d)) # N x M_d R_d**2
-    H_d = H_lt.T @ H_gt # R_{d+1}**2 M_d x M_d R_d**2
-    H_d = H_d.reshape([model.R[d+1], model.R[d+1], model.M[d], model.M[d], model.R[d], model.R[d]], order='F')
-    H_d = H_d.transpose([4, 2, 0, 5, 3, 1])
-    H_d = H_d.reshape([model.R[d]*model.M[d]*model.R[d+1], model.R[d]*model.M[d]*model.R[d+1]], order='C')
+    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d])  # N x M_d R_{d+1} R_d{+1}
+    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d))  # N x R_d R_d M_d
+    H_d = H_lt.T @ H_gt  # M_d R_{d+1} R_{d+1} R_d R_d M_d
+    H_d = H_d.reshape([model.M[d], model.R[d + 1], model.R[d + 1], model.R[d], model.R[d], model.M[d]], order='F')
+    H_d = H_d.transpose([3, 0, 1, 4, 5, 2])
+    H_d = H_d.reshape([model.R[d] * model.M[d] * model.R[d + 1], model.R[d] * model.M[d] * model.R[d + 1]])
     assert np.allclose(GTG, H_d), "GTG does not match backward accumulator H"
 
 def test_H_against_G_all_cores():
@@ -123,16 +122,17 @@ def test_H_against_G_all_cores():
                 model.train(X_train, Y_train, iteration_limit=0)
 
                 for d in range(D):
-                    G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d]) # N x R_{d+1} M_d
-                    G = khatri_rao(G_lt, model.backward_accumulator_G(d)) # N x R_{d+1} M_d R_d
+                    G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d]) # N x M_d R_{d+1}
+                    G = khatri_rao(G_lt, model.backward_accumulator_G(d)) # N x R_d M_d R_{d+1}
                     GTG = G.T @ G
-                    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d]) # N x R_{d+1}**2 M_d
-                    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d)) # N x M_d R_d**2
-                    H_d = H_lt.T @ H_gt # R_{d+1}**2 M_d x M_d R_d**2
-                    H_d = H_d.reshape([model.R[d], model.R[d], model.M[d], model.M[d], model.R[d+1], model.R[d+1]], order='F')
-                    H_d = H_d.transpose([4, 2, 0, 5, 3, 1])
-                    H_d = H_d.reshape([model.R[d]*model.M[d]*model.R[d+1], model.R[d]*model.M[d]*model.R[d+1]], order='C')
 
+                    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d]) # N x M_d R_{d+1} R_d{+1}
+                    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d)) # N x R_d R_d M_d
+                    H_d = H_lt.T @ H_gt # M_d R_{d+1} R_{d+1} R_d R_d M_d
+                    H_d = H_d.reshape([model.M[d], model.R[d+1], model.R[d+1], model.R[d], model.R[d], model.M[d]], order='F')
+                    H_d = H_d.transpose([4,0,1,3,5,2])
+                    H_d = H_d.reshape([model.R[d]*model.M[d]*model.R[d+1], model.R[d]*model.M[d]*model.R[d+1]])
+                    print( H_d, GTG)
                     assert np.allclose(GTG, H_d), f"GTG does not match H for d={d}"
     print("all cores match")
 
@@ -160,21 +160,29 @@ def forward_step_by_step():
     """
     D = 3  # Number of cores
     I = 2
-    ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
+    ranks = [3 for _ in range(D - 1)]  # Tensor-train ranks
     ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
     dims = [I for _ in range(D)]  # dimensionality of kernel
 
     X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 2, 0)
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
-    model.W.cores[0] = Core(np.array([[[1,3],[2,4]]]))
-    model.W.cores[1] = Core(np.array([[[5,9],[7,11]],[[6, 10], [8,12]]]))
-    model.W.cores[2] = Core(np.array([[[13],[15]],[[14],[16]]]))
+    model.W.cores[0] = Core(np.array([[[1,0,2],[0,1,0]]]))
+    model.W.cores[1] = Core(np.array([[[1,0,4],
+                                        [0,2,0]],
 
-    model.feature_map[0] = np.array([[1,3],[2,4]])
-    model.feature_map[1] = np.array([[10,30],[20,40]])
-    model.feature_map[2] = np.array([[100,300],[200,400]])
+                                       [[0,3,0],
+                                        [1,0,4]],
+
+                                       [[2,0,5],
+                                        [0,3,0]]]))
+    model.W.cores[2] = Core(np.array([[[-1],[0]],[[0],[-1]], [[-1],[0]]]))
+
+    model.feature_map[0] = np.eye(2)
+    model.feature_map[1] = np.eye(2)
+    model.feature_map[2] = np.eye(2)
     model.forward_accumulator_H(3)
+
 
 def backward_step_by_step():
     """
@@ -189,8 +197,8 @@ def backward_step_by_step():
     X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 2, 0)
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
-    model.W.cores[0] = Core(0.1*np.array([[[1,3, 3],[2,4,4]]]))
-    model.W.cores[1] = Core(0.1*np.array([[[1,7,13],
+    model.W.cores[0] = Core(np.array([[[1, 0,2],[0,1,0]]]))
+    model.W.cores[1] = Core(np.array([[[1,7,13],
                                            [4,10,16]],
 
                                           [[2,8,14],
@@ -198,7 +206,7 @@ def backward_step_by_step():
 
                                           [[3,9,15],
                                            [6,12,18]]]))
-    model.W.cores[2] = Core(0.1*np.array([[[13],[15]],[[14],[16]],[[17],[18]]]))
+    model.W.cores[2] = Core(np.array([[[13],[15]],[[14],[16]],[[17],[18]]]))
 
     model.feature_map[0] = np.array([[1,3],[2,4]])
     model.feature_map[1] = np.array([[1,3],[2,4]])
@@ -214,13 +222,10 @@ def backward_step_by_step():
         H_d = H_d.transpose([4,2,0, 5,3,1])
         H_d = H_d.reshape([model.R[d] * model.M[d] * model.R[d + 1], model.R[d] * model.M[d] * model.R[d + 1]],
                           order='C')
-
         assert np.allclose(GTG, H_d), "GTG and H do not match"
 
-# backward_step_by_step()
+test_G_accumulators()
+test_H_accumulators()
 test_H_backward_against_G()
 test_H_forward_against_G()
 test_H_against_G_all_cores()
-
-tmp = np.array(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'])
-print(tmp.reshape(2,3,2))
