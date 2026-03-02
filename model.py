@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 
 from kernels import *
@@ -58,31 +59,31 @@ class BTTKM:
             # cores update
             vectorized_W = []
             for d in range(self.D):
-                H_lt = khatri_rao(self.forward_accumulator_H(d), self.feature_map[d])
-                H_gt = khatri_rao(self.feature_map[d], self.backward_accumulator_H(d))
-                H_d = H_lt.T @ H_gt
+                H_lt = khatri_rao(self.feature_map[d], self.forward_accumulator_H(d)) # N x R_{d+1}**2 M_d
+                H_gt = khatri_rao(self.backward_accumulator_H(d), self.feature_map[d]) # N x M_d R_d**2
+                H_d = H_lt.T @ H_gt # R_{d+1} R_{d+1} M_d x M_d R_d R_d
                 H_d = H_d.reshape([self.R[d+1], self.R[d+1], self.M[d], self.M[d], self.R[d], self.R[d]], order='F')
-                H_d = H_d.transpose([4, 2, 0, 5, 3, 1])
+                # R_{d+1} x R_{d+1} x M_d x M_d x R_d x R_d
+                H_d = H_d.transpose([4, 2, 0, 5, 3, 1]) # R_d x M_d x R_{d+1} x R_d x M_d x R_d+1
                 H_d = H_d.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='C')
+                # R_d M_d R_{d+1} x R_d M_d R_d+1
 
-                G_lt = khatri_rao(self.feature_map[d], self.forward_accumulator_G(d))
-                G_d = khatri_rao(self.backward_accumulator_G(d), G_lt)
+                G_lt = khatri_rao(self.forward_accumulator_G(d), self.feature_map[d])
+                G_d = khatri_rao(G_lt, self.backward_accumulator_G(d))
 
-                tensor_shape = (self.R[d], self.R[d], self.M[d], self.M[d], self.R[d+1], self.R[d+1])
-                mean_tensor = H_d.reshape(tensor_shape)
-                mean_tensor = np.transpose(mean_tensor, [0,2,4,1,3,5])
-                mean_mat = mean_tensor.reshape(self.R[d]*self.M[d]*self.R[d+1],self.R[d]*self.M[d]*self.R[d+1])
+                lambda_mat_next = np.diag(self.lambda_R[d+1]) # R_{d+1} x R_{d+1}
+                lambda_mat_prev = np.diag(self.lambda_R[d]) # R_d x R_d
+                delta_mat = np.diag(self.delta[d]) # M_d x M_d
+                variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev) # R_d M_d R_{d+1} x R_d M_d R_{d+1}
 
-                lambda_mat_next = np.diag(self.lambda_R[d+1])
-                lambda_mat_prev = np.diag(self.lambda_R[d])
-                delta_mat = np.diag(self.delta[d])
-                variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
-
-                self.Sigma[d] = np.linalg.inv(np.add(self.expectation_tau*mean_mat, variance_term))
-
-                vectorized_W.append(self.expectation_tau*Y@G_d@self.Sigma[d])
+                self.Sigma[d] = np.linalg.inv(np.add(self.expectation_tau*H_d, variance_term)) # R_d M_d R_{d+1} x R_d M_d R_{d+1}
+                print(np.max(abs(H_d - H_d.T)))
+                vectorized_W.append(self.expectation_tau*self.Sigma[d]@G_d.T@Y.reshape(-1,1))
+                # print(f"||W|| = {np.linalg.norm(vectorized_W[d])}")
+                # print(f"||G|| = {np.linalg.norm(G_d)}")
+                # print(f"||H|| = {np.linalg.norm(H_d)}")
             for d, core in enumerate(self.W.cores):
-                core.core = vectorized_W[d].reshape((self.R[d+1], self.M[d], self.R[d])).transpose([2,1,0])
+                core.core = vectorized_W[d].reshape((self.R[d], self.M[d], self.R[d+1]), order='F')
 
             # posterior update lambda
             # if lambda_update:
@@ -150,14 +151,15 @@ class BTTKM:
 
             it += 1
             print(f"MSE: {errors[it]}")
-            # if abs(errors[-1] - errors[-2]) < error_bound:
-            #     plt.plot(errors)
-            #     plt.show()
-            #     print("convergence bound reached, exiting")
-            #     break
+            if abs(errors[-1] - errors[-2]) < error_bound:
+                print("convergence bound reached, exiting")
+                break
 
         if it == iteration_limit:
             print("iteration limit reached, exiting")
+
+        plt.plot(errors)
+        plt.show()
 
     def predict(self, X):
         self.feature_map = self.kernel(X, self.D)
@@ -166,13 +168,13 @@ class BTTKM:
     def forward_accumulator_G(self, d):
         G_k = np.ones((self.N, 1)) # N x 1
         for k in range(d):
-            G_k = khatri_rao(G_k, self.feature_map[k]) @ self.W.cores[k].unfold(3).T # (N x R_d M_d)(R_d M_d x R_{d+1})
+            G_k = khatri_rao(self.feature_map[k], G_k) @ self.W.cores[k].unfold(3).T # (N x R_d M_d)(R_d M_d x R_{d+1})
         return G_k # N x R_{d+1}
 
     def backward_accumulator_G(self, d):
         G_k = np.ones((self.N, 1)) # N x 1
         for k in range(self.D-1, d, -1):
-            G_k = khatri_rao(G_k, self.feature_map[k]) @ self.W.cores[k].unfold(1).T # (N x R_{d+1} M_d)(R_{d+1} M_d x R_d)
+            G_k = khatri_rao(self.feature_map[k], G_k) @ self.W.cores[k].unfold(1).T # (N x R_{d+1} M_d)(R_{d+1} M_d x R_d)
         return G_k # N x R_d
 
     def forward_accumulator_H(self, d):
@@ -190,10 +192,10 @@ class BTTKM:
             covariance_WW = np.transpose(covariance_WW, [0,3, 1,4, 2,5]) # R_d x R_d x M_d x M_d x R_{d+1} x R_{d+1}
             covariance_WW = covariance_WW.reshape([(self.R[k]*self.M[k])**2, self.R[k+1]**2], order='C')
             # R_d R_d M_d M_d x R_{d+1} R_{d+1}
-            # expectation_WW = np.add(mean_WW, covariance_WW) # R_d R_d M_d M_d x R_{d+1} R_{d+1}
-            expectation_WW = mean_WW
+            expectation_WW = np.add(mean_WW, covariance_WW) # R_d R_d M_d M_d x R_{d+1} R_{d+1}
             # (N xM_d M_d R_d R_d)(R_d R_d M_d M_d x R_{d+1} R_{d+1})
-            H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW
+
+            H_k = khatri_rao(H_k, khatri_rao(self.feature_map[k], self.feature_map[k])) @ expectation_WW
         return H_k # N x R_{d+1}**2
 
     def backward_accumulator_H(self, d):
@@ -211,10 +213,9 @@ class BTTKM:
             covariance_shape = (self.R[k], self.M[k], self.R[k+1], self.R[k], self.M[k], self.R[k+1])
             covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(covariance_shape, order='F') # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
             covariance_WW = np.transpose(covariance_WW, [1,4, 2,5, 0,3]) # M_d x M_d x R_{d+1} x R_{d+1} x R_d x R_d
-            covariance_WW = covariance_WW.reshape([(self.M[k]*self.R[k+1])**2, self.R[k]**2], order='C')
+            covariance_WW = covariance_WW.reshape([(self.M[k]*self.R[k+1])**2, self.R[k]**2], order='F')
             # M_d M_d R_{d+1} R_{d+1} x R_d R_d
-            # expectation_WW = np.add(mean_WW, covariance_WW)# M_d M_d R_{d+1} R_{d+1} x R_d R_d
-            expectation_WW = mean_WW
+            expectation_WW = np.add(mean_WW, covariance_WW)# M_d M_d R_{d+1} R_{d+1} x R_d R_d
             # (N x M_d M_d R_{d+1} R_{d+1})(M_d M_d R_{d+1} R_{d+1} x R_d R_d)
-            H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW
+            H_k = khatri_rao(H_k, khatri_rao(self.feature_map[k], self.feature_map[k])) @ expectation_WW
         return H_k # N x R_d**2
