@@ -63,12 +63,12 @@ def test_H_forward_against_G():
     model.train(X_train, Y_train, iteration_limit=0)
 
     d = model.D - 1
-    G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d])
-    G = khatri_rao(G_lt, model.backward_accumulator_G(d))
+    G_lt = khatri_rao(model.feature_map[d], model.forward_accumulator_G(d))
+    G = khatri_rao(model.backward_accumulator_G(d), G_lt)
     GTG = G.T @ G
 
-    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d]) # N x R_{d+1}**2 M_d
-    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d)) #  N x M_d R_d**2
+    H_lt = khatri_rao(model.feature_map[d], model.forward_accumulator_H(d)) # N x R_{d+1}**2 M_d
+    H_gt = khatri_rao(model.backward_accumulator_H(d), model.feature_map[d]) #  N x M_d R_d**2
     H_d = H_lt.T @ H_gt # R_{d+1} R_{d+1} M_d x M_d R_d R_d
     H_d = H_d.reshape([model.R[d], model.R[d], model.M[d], model.M[d], model.R[d+1], model.R[d+1]], order='F')
 
@@ -89,12 +89,12 @@ def test_H_backward_against_G():
     model.train(X_train, Y_train, iteration_limit=0)
 
     d = 0
-    G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d])
-    G = khatri_rao(G_lt, model.backward_accumulator_G(d))
+    G_lt = khatri_rao(model.feature_map[d], model.forward_accumulator_G(d))
+    G = khatri_rao(model.backward_accumulator_G(d), G_lt)
     GTG = G.T @ G
 
-    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d]) # N x R_{d+1}**2 M_d
-    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d)) # N x M_d R_d**2
+    H_lt = khatri_rao(model.feature_map[d], model.forward_accumulator_H(d)) # N x R_{d+1}**2 M_d
+    H_gt = khatri_rao(model.backward_accumulator_H(d), model.feature_map[d]) # N x M_d R_d**2
     H_d = H_lt.T @ H_gt # R_{d+1}**2 M_d x M_d R_d**2
     H_d = H_d.reshape([model.R[d+1], model.R[d+1], model.M[d], model.M[d], model.R[d], model.R[d]], order='F')
     H_d = H_d.transpose([4, 2, 0, 5, 3, 1])
@@ -113,11 +113,11 @@ def test_H_against_G_all_cores():
     model.train(X_train, Y_train, iteration_limit=0)
 
     for d in range(D):
-        G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d]) # N x R_{d+1} M_d
-        G = khatri_rao(G_lt, model.backward_accumulator_G(d)) # N x R_{d+1} M_d R_d
+        G_lt = khatri_rao(model.feature_map[d], model.forward_accumulator_G(d)) # N x R_{d+1} M_d
+        G = khatri_rao(model.backward_accumulator_G(d), G_lt) # N x R_{d+1} M_d R_d
         GTG = G.T @ G
-        H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d]) # N x R_{d+1}**2 M_d
-        H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d)) # N x M_d R_d**2
+        H_lt = khatri_rao(model.feature_map[d], model.forward_accumulator_H(d)) # N x R_{d+1}**2 M_d
+        H_gt = khatri_rao(model.backward_accumulator_H(d), model.feature_map[d]) # N x M_d R_d**2
         H_d = H_lt.T @ H_gt # R_{d+1}**2 M_d x M_d R_d**2
         H_d = H_d.reshape([model.R[d], model.R[d], model.M[d], model.M[d], model.R[d+1], model.R[d+1]], order='F')
         H_d = H_d.transpose([4, 2, 0, 5, 3, 1])
@@ -188,11 +188,11 @@ def backward_step_by_step():
     model.feature_map[1] = np.array([[1,3],[2,4]])
     model.feature_map[2] = np.array([[1,3],[2,4]])
     for d in range(D):
-        G_lt = khatri_rao(model.forward_accumulator_G(d), model.feature_map[d])
-        G = khatri_rao(G_lt, model.backward_accumulator_G(d))
+        G_lt = khatri_rao(model.feature_map[d], model.forward_accumulator_G(d))
+        G = khatri_rao(model.backward_accumulator_G(d), G_lt)
         GTG = G.T @ G
-        H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d])  # N x R_{d+1}**2 M_d
-        H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d))  # N x M_d R_d**2
+        H_lt = khatri_rao(model.feature_map[d], model.forward_accumulator_H(d))  # N x R_{d+1}**2 M_d
+        H_gt = khatri_rao(model.backward_accumulator_H(d), model.feature_map[d])  # N x M_d R_d**2
         H_d = H_lt.T @ H_gt  # R_{d+1}**2 M_d x M_d R_d**2
         H_d = H_d.reshape([model.R[d], model.R[d], model.M[d], model.M[d], model.R[d+1], model.R[d+1]], order='F')
         H_d = H_d.transpose([4,2,0, 5,3,1])
@@ -200,7 +200,9 @@ def backward_step_by_step():
                           order='C')
 
         assert np.allclose(GTG, H_d), "GTG and H do not match"
-backward_step_by_step()
+
+test_G_accumulators()
+test_H_accumulators()
 test_H_backward_against_G()
 test_H_forward_against_G()
 test_H_against_G_all_cores()
