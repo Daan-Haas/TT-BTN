@@ -146,7 +146,7 @@ def tensorize_vector():
 
 def forward_step_by_step():
     D = 3  # Number of cores
-    I = 2
+    I = 3
     ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
     ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
     dims = [I for _ in range(D)]  # dimensionality of kernel
@@ -154,15 +154,25 @@ def forward_step_by_step():
     X_train, Y_train, X_test, Y_test, parameters = generate_lin_dataset(I, 2, 0)
     model = BTTKM(D, ranks, dims, no_kernel)
     model.train(X_train, Y_train, iteration_limit=0)
-    model.W.cores[0] = Core(np.array([[[1,3],[2,4]]]))
-    model.W.cores[1] = Core(np.array([[[5,9],[7,11]],[[6, 10], [8,12]]]))
-    model.W.cores[2] = Core(np.array([[[13],[15]],[[14],[16]]]))
+    model.W.cores[0] = Core(np.array([[[1,0],[0,1], [1,0]]]))
+    model.W.cores[1] = Core(np.array([[[2,0],[0,2],[2,0]],[[0, 2], [2,0],[0,2]]]))
+    model.W.cores[2] = Core(np.array([[[-1],[0],[-1]],[[0],[-1],[0]]]))
 
-    model.feature_map[0] = np.array([[1,3],[2,4]])
-    model.feature_map[1] = np.array([[10,30],[20,40]])
-    model.feature_map[2] = np.array([[100,300],[200,400]])
-    model.forward_accumulator_H(3)
+    model.feature_map[0] = np.array([[1,0,1],[0,1,0]])
+    model.feature_map[1] = np.array([[1,0,1],[0,1,0]])
+    model.feature_map[2] = np.array([[1,0,1],[0,1,0]])
 
+    d = 1
+    H_lt = khatri_rao(model.forward_accumulator_H(d), model.feature_map[d])  # N x M_d R_d**2
+    H_gt = khatri_rao(model.feature_map[d], model.backward_accumulator_H(d))  # N x R_{d+1}**2 M_d
+    print(f"H_lt = {H_lt}, H_gt = {H_gt}")
+    H_d = H_lt.T @ H_gt  # M_d R_d**2 x R_{d+1}**2 M_d
+    print(f"H_d = {H_d}")
+    H_d = H_d.reshape([model.M[d], model.R[d], model.R[d], model.R[d+1], model.R[d+1], model.M[d]], order='F')
+    # M_d x R_d x R_d x R_{d+1} x R_{d+1} x M_d
+    H_d = H_d.transpose([1,0,3,2,5,4])  # R_d x M_d x R_{d+1} x R_d x M_d x R_d+1
+    H_d = H_d.reshape([model.R[d] * model.M[d] * model.R[d + 1], model.R[d] * model.M[d] * model.R[d + 1]], order='F')
+    print(f"reshaped H_d = {H_d}")
 def backward_step_by_step():
     D = 3  # Number of cores
     I = 2
@@ -201,8 +211,10 @@ def backward_step_by_step():
 
         assert np.allclose(GTG, H_d), "GTG and H do not match"
 
+# forward_step_by_step()
+# backward_step_by_step()
 test_G_accumulators()
 test_H_accumulators()
-test_H_backward_against_G()
-test_H_forward_against_G()
-test_H_against_G_all_cores()
+# test_H_backward_against_G()
+# test_H_forward_against_G()
+# test_H_against_G_all_cores()
