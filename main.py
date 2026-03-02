@@ -18,11 +18,12 @@ ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dim
 dims = [I for _ in range(D)] # dimensionality of kernels
 
 X_train, Y_train, X_test, Y_test, ground_truth = generate_quadratic_dataset(I, N, 0)
-noise = [0.001*np.random.rand(ranks[d], dims[d], ranks[d+1]) for d in range(D)]
-model = ground_truth
-for d, core in enumerate(model.W.cores):
-    core.core = core.core + noise[d]
-model.train(X_train, Y_train, iteration_limit=20)
+# noise = [np.random.rand(ranks[d], dims[d], ranks[d+1]) for d in range(D)]
+# model = ground_truth
+# for d, core in enumerate(model.W.cores):
+#     core.core = core.core + noise[d]
+model = BTTKM(D, ranks, dims, quadratic_kernel)
+model.train(X_train, Y_train)#, lambda_update=True, delta_update=True, tau_update=True)
 
 results = model.predict(X_test)
 
