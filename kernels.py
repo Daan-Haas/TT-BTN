@@ -6,8 +6,8 @@ def no_kernel(X, M):
 def quadratic_kernel(X, D):
     Phi = np.zeros((D, X.shape[0], X.shape[1]))
     for d in range(D):
-        Phi[d,:,:] = np.array([x**(d+1) for x in X])
-    return Phi
+        Phi[d][:][:] = [x**(d+1) for x in X]
+    return Phi.tolist()
 
 def pure_power_features_full(X, input_dimension):
     """

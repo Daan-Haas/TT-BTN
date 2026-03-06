@@ -210,7 +210,6 @@ def backward_step_by_step():
                           order='C')
 
         assert np.allclose(GTG, H_d), "GTG and H do not match"
-
 # forward_step_by_step()
 # backward_step_by_step()
 test_G_accumulators()
