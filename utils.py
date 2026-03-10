@@ -44,6 +44,6 @@ def khatri_rao(A: ndarray, B: ndarray) -> ndarray:
     B = np.asarray(B)
 
     if not A.shape[0] == B.shape[0]:
-        raise ValueError('A and B must have same number of rows')
+        raise ValueError(f'A and B must have same number of rows, {A.shape[0]} does not equal {B.shape[0]}')
     c = np.vstack([np.kron(A[k, :], B[k, :]) for k in range(A.shape[0])])
     return c

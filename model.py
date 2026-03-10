@@ -34,12 +34,13 @@ class BTTKM:
               lambda_update=False,
               delta_update=False,
               tau_update=False,
-              error_bound=1e-4, iteration_limit=1000,
+              error_bound=1e-2, iteration_limit=1000,
               rank_pruning=False,
               feature_pruning=False,
               early_stopping=False):
         print("Training")
-        self.feature_map = self.kernel(X, self.D)
+        self.feature_map = self.kernel(X, max(self.M), self.D)
+
         self.N = X.shape[0]
         self.a_N = a_0
         self.b_N = b_0
@@ -52,9 +53,9 @@ class BTTKM:
         self.lambda_R = [c_0[d]/d_0[d] for d in range(self.D+1)]
         lam_norm = []
 
-        g_0 = [1e-6 * np.ones(self.M[d]) for d in range(self.D)]
+        g_0 = [1 * np.ones(self.M[d]) for d in range(self.D)]
         self.g_N = g_0.copy()
-        h_0 = [1e-6 * np.ones(self.M[d]) for d in range(self.D)]
+        h_0 = [1 * np.ones(self.M[d]) for d in range(self.D)]
         self.h_N = h_0.copy()
         self.delta = [g_0[d]/h_0[d] for d in range(self.D)]
         del_norm = []
@@ -104,10 +105,19 @@ class BTTKM:
                     W_2 = unfold(self.W[d], 2)
 
                     tensor_shape = (self.R[d], self.M[d], self.R[d + 1])
-                    variance_tensor_d = np.diag(self.Sigma[d]).reshape(tensor_shape)
-                    variance_matrix_d = np.vstack([variance_tensor_d[:, i, :].T.reshape(1, -1).flatten() for i in
-                                                   range(variance_tensor_d.shape[1])])
 
+                    # lambda_mat_next = np.diag(self.lambda_R[d + 1])  # R_{d+1} x R_{d+1}
+                    # lambda_mat_prev = np.diag(self.lambda_R[d])  # R_d x R_d
+                    # delta_mat = np.diag(self.delta[d])  # M_d x M_d
+                    # temp = np.linalg.inv(self.Sigma[d]) - np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
+                    # temp += np.kron(np.kron(lambda_mat_next, np.eye(self.M[d])), lambda_mat_prev)
+                    # temp = np.linalg.inv(temp)
+                    # variance_tensor_d = np.diag(temp).reshape(tensor_shape, order='F')
+
+                    variance_tensor_d = np.diag(self.Sigma[d]).reshape(tensor_shape, order='F')
+
+                    variance_matrix_d = np.vstack([variance_tensor_d[:, i, :].reshape(1, -1).flatten() for i in
+                                                   range(variance_tensor_d.shape[1])])
                     sparsity_term = np.kron(np.diag(self.lambda_R[d + 1]), np.diag(self.lambda_R[d]))
                     variance_term = variance_matrix_d @ np.kron(self.lambda_R[d + 1], self.lambda_R[d])
                     expectation = np.add(np.diag(W_2 @ sparsity_term @ W_2.T), variance_term)
@@ -115,7 +125,7 @@ class BTTKM:
 
                     self.delta[d] = self.g_N[d] / self.h_N[d]
                     if feature_pruning:
-                        pruning_mask = self.delta[d] > 1000
+                        pruning_mask = self.delta[d] > 100
                         if any(pruning_mask):
                             self.W[d] = self.W[d][:, ~pruning_mask, :]
                             self.M[d] = sum(~pruning_mask)
@@ -137,12 +147,30 @@ class BTTKM:
                     Lambda_d_plus_1 = np.diag(self.lambda_R[d+1])
 
                     expectation1_term1 = np.diag(W_3@np.kron(Delta_d_1, Lambda_d_min_1)@W_3.T)
+
+                    # lambda_mat_next = np.diag(self.lambda_R[d])  # R_{d+1} x R_{d+1}
+                    # lambda_mat_prev = np.diag(self.lambda_R[d-1])  # R_d x R_d
+                    # delta_mat = np.diag(self.delta[d-1])  # M_d x M_d
+                    # temp = np.linalg.inv(self.Sigma[d-1]) - np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
+                    # temp += np.kron(np.kron(np.eye(self.R[d]), delta_mat), lambda_mat_prev)
+                    # temp = np.linalg.inv(temp)
+                    # V_d = np.diag(temp).reshape(self.R[d-1], self.M[d-1], self.R[d], order='F')
+
                     V_d = np.diag(self.Sigma[d-1]).reshape(self.R[d-1], self.M[d-1], self.R[d], order='F')
                     V_d_3 = np.vstack([V_d[:,:,i].T.reshape(1,-1).flatten() for i in range(V_d.shape[2])])
                     expectation1_term2 = V_d_3@np.kron(self.delta[d-1], self.lambda_R[d-1])
                     expectation1 = expectation1_term1 + expectation1_term2
 
                     expectation2_term1 = np.diag(W_1@np.kron(Lambda_d_plus_1, Delta_d)@W_1.T)
+
+                    # lambda_mat_next = np.diag(self.lambda_R[d+1])  # R_{d+1} x R_{d+1}
+                    # lambda_mat_prev = np.diag(self.lambda_R[d])  # R_d x R_d
+                    # delta_mat = np.diag(self.delta[d])  # M_d x M_d
+                    # temp = np.linalg.inv(self.Sigma[d]) - np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
+                    # temp += np.kron(np.kron(lambda_mat_next, delta_mat), np.eye(self.R[d]))
+                    # temp = np.linalg.inv(temp)
+                    # V_d = np.diag(temp).reshape(self.R[d], self.M[d], self.R[d+1], order='F')
+
                     V_d = np.diag(self.Sigma[d]).reshape(self.R[d], self.M[d], self.R[d+1], order='F')
                     V_d_1 = np.vstack([V_d[i,:,:].T.reshape(1,-1).flatten() for i in range(V_d.shape[0])])
 
@@ -172,7 +200,7 @@ class BTTKM:
                             self.c_N[d] = self.c_N[d][~pruning_mask]
                             self.d_N[d] = self.d_N[d][~pruning_mask]
 
-            lam_norm.append(self.lambda_R[d])
+            lam_norm.append([np.linalg.norm(self.lambda_R[d]) for d in range(self.D)])
             # noise precision update
             if tau_update:
                 self.a_N = a_0 + self.N / 2
@@ -209,23 +237,26 @@ class BTTKM:
             if abs(ELBO[-1] - ELBO[-2]) < error_bound:
                 print("Convergence bound reached, exiting")
                 break
-            if ELBO[-1] > best_ELBO:
-                best_ELBO = ELBO[-1]
-                best_cores = self.W
-                worse_itters = 0
-            else:
-                worse_itters +=1
-                if worse_itters >= 20 and it>40:
-                    self.W = best_cores
-                    print("Early stopping")
-                    break
+            # if ELBO[-1] > best_ELBO:
+            #     best_ELBO = ELBO[-1]
+            #     best_cores = self.W
+            #     worse_itters = 0
+            # else:
+            #     worse_itters +=1
+            #     if worse_itters >= 20 and it>40:
+            #         self.W = best_cores
+            #         print("Early stopping")
+            #         break
         if it == iteration_limit:
             print("Iteration limit reached, exiting")
 
         fig, ax1 = plt.subplots()
         ax1.plot(ELBO, label='ELBO')
         ax2 = ax1.twinx()
-        ax2.plot(del_norm, color="red", label=r"$||\delta||$")
+        if lambda_update:
+            ax2.plot(lam_norm, color="red", label=r"$||\lambda||$")
+        if delta_update:
+            ax2.plot(del_norm, color="purple", label=r"$||\delta||$")
         ax2.plot(W_norm, color="orange", label=r"$||\boldsymbol{\mathcal{W}}||$")
         ax1.set_title("Training ELBO")
         ax1.set_xlabel("iteration")
@@ -235,7 +266,7 @@ class BTTKM:
         plt.show()
 
     def predict(self, X):
-        self.feature_map = self.kernel(X, self.D)
+        self.feature_map = self.kernel(X, max(self.M), self.D)
         return self.forward_accumulator_G(self.D)
 
     def forward_accumulator_G(self, d):
