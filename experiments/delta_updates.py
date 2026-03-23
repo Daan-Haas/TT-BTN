@@ -1,13 +1,10 @@
-import matplotlib.pyplot as plt
 import pickle
 
-from toy_data import generate_pure_power_dataset
-from utils import *
-from model import *
+from models.TT_model import *
 from toy_data import *
 
 seed = 101
-# np.random.seed(seed)
+np.random.seed(seed)
 ### Data settings ###
 I = 5 #
 N = 100 # Number of data points
@@ -19,7 +16,7 @@ ranks = [5 for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
 dims = [I for _ in range(D)] # dimensionality of kernels
 
-X_train, Y_train, X_test, Y_test, ground_truth = generate_pure_power_dataset(D,3, 3, N, 0)
+X_train, Y_train, X_test, Y_test = generate_pure_power_dataset(D,3, 5,3,3, N, 0, update='delta')
 uninformative_train_features = noise_var * np.random.random([N,2])
 X_train = np.append(X_train, uninformative_train_features, axis=1)
 
@@ -27,9 +24,8 @@ uninformative_test_features = noise_var * np.random.random([N,2])
 X_test = np.append(X_test, uninformative_test_features, axis=1)
 
 
-model = BTTKM(D, ranks, [I + 2 for _ in range(D)], pure_power_features_full)
-model.train(X_train, Y_train, iteration_limit=400, delta_update=True)
-print([model.W[d] for d in range(model.D)])
+model = BTTKM(D, ranks, [I for _ in range(D)], pure_power_features_full)
+model.train(X_train, Y_train, iteration_limit=800, delta_update=True)
 filehandler = open("pretrained_models/delta_model", 'wb')
 pickle.dump(model, filehandler)
 # pickled_model = open("delta_model", r)

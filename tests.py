@@ -1,6 +1,4 @@
-import math
-
-from model import *
+from models.TT_model import *
 from toy_data import *
 from utils import *
 

@@ -4,6 +4,9 @@ import numpy as np
 
 from kernels import *
 from utils import khatri_rao, unfold
+from tqdm import tqdm, trange
+
+import tracemalloc
 
 class BTTKM:
     def __init__(self, nr_cores, ranks, M, kernel):
@@ -18,7 +21,8 @@ class BTTKM:
         self.D = nr_cores
         self.init_cores()
         size = [self.R[d]*self.M[d]*self.R[d+1] for d in range(self.D)]
-        self.Sigma = [np.eye(size[d]) for d in range(self.D)]
+        self.Sigma_inv = [np.eye(size[d]) for d in range(self.D)]
+        self.covar = [np.ones(size[d]) for d in range(self.D)]
         self.kernel = kernel
         self.N = 100
 
@@ -37,10 +41,13 @@ class BTTKM:
               error_bound=1e-2, iteration_limit=1000,
               rank_pruning=False,
               feature_pruning=False,
-              early_stopping=False):
+              early_stopping=False,
+              printing=True,
+              plotting=True):
         print("Training")
-        self.feature_map = self.kernel(X, max(self.M), self.D)
+        self.feature_map = self.kernel(X, max(self.M))
 
+        tracemalloc.start()
         self.N = X.shape[0]
         self.a_N = a_0
         self.b_N = b_0
@@ -64,33 +71,33 @@ class BTTKM:
 
         ELBO = [-np.inf]
         it = 0
-        best_ELBO = -np.inf
-        worse_itters = 0
-        while it < iteration_limit:
+        pbar = trange(iteration_limit, desc="Running", leave=True)
+        for it in pbar:
             # cores update
-            vectorized_W = []
             for d in range(self.D):
                 H_lt = khatri_rao(self.forward_accumulator_H(d), self.feature_map[d]) # N x M_d R_d**2
                 H_gt = khatri_rao(self.feature_map[d], self.backward_accumulator_H(d)) # N x R_{d+1}**2 M_d
-                H_d = H_lt.T @ H_gt # M_d R_d**2 x R_{d+1}**2 M_d
-                H_d = H_d.reshape([self.M[d], self.R[d], self.R[d], self.R[d+1], self.R[d+1], self.M[d]], order='F')
+                H_d_mat = H_lt.T @ H_gt # M_d R_d**2 x R_{d+1}**2 M_d
+                H_d_tens = H_d_mat.reshape([self.M[d], self.R[d], self.R[d], self.R[d+1], self.R[d+1], self.M[d]], order='F')
                 # M_d x R_d x R_d x R_{d+1} x R_{d+1} x M_d
-                H_d = H_d.transpose([1,0,3,2,5,4])  # R_d x M_d x R_{d+1} x R_d x M_d x R_d+1
-                H_d = H_d.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F')
+                H_d_tens_trans = H_d_tens.transpose([1,0,3,2,5,4])  # R_d x M_d x R_{d+1} x R_d x M_d x R_d+1
+                H_d = H_d_tens_trans.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F')
                 # R_d M_d R_{d+1} x R_d M_d R_d+1
-                assert np.max(abs(H_d.T - H_d))/np.linalg.norm(H_d) < 1e-6, f"H_d not symmetrical: {H_d}"
+                # assert np.max(abs(H_d.T - H_d))/np.linalg.norm(H_d) < 1e-6, f"H_d not symmetrical: {H_d}"
 
                 G_lt = khatri_rao(self.feature_map[d], self.forward_accumulator_G(d)) # N x R_d M_d
                 G_d = khatri_rao(self.backward_accumulator_G(d), G_lt) # N x R_d M_d R_{d+1}
 
-                lambda_mat_next = np.diag(self.lambda_R[d+1]) # R_{d+1} x R_{d+1}
-                lambda_mat_prev = np.diag(self.lambda_R[d]) # R_d x R_d
-                delta_mat = np.diag(self.delta[d]) # M_d x M_d
-                variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev) # R_d M_d R_{d+1} x R_d M_d R_{d+1}
-                self.Sigma[d] = np.linalg.inv(np.add(self.expectation_tau*H_d, variance_term)) # R_d M_d R_{d+1} x R_d M_d R_{d+1}
-                vectorized_W.append(self.expectation_tau*self.Sigma[d]@G_d.T@Y.reshape(-1,1))
-                self.W[d] = vectorized_W[d].reshape((self.R[d], self.M[d], self.R[d+1]), order='F')
-            W_norm.append(np.linalg.norm(self.W[d]))
+                variance_term_diag = np.kron(np.kron(self.lambda_R[d+1], self.delta[d]), self.lambda_R[d]) # R_d M_d R_{d+1} x R_d M_d R_{d+1}
+                self.Sigma_inv[d] = np.add(self.expectation_tau*H_d, np.diag(variance_term_diag)) # R_d M_d R_{d+1} x R_d M_d R_{d+1}
+                Sigma = np.linalg.inv(self.Sigma_inv[d])
+                self.covar[d] = np.diag(Sigma)
+                rhs = G_d.T@Y.reshape(-1,1)
+                vectorized_W = self.expectation_tau*np.linalg.solve(self.Sigma_inv[d], rhs)
+                self.W[d] = vectorized_W.reshape((self.R[d], self.M[d], self.R[d+1]), order='F', copy=False)
+                del H_lt, H_gt, H_d_mat, H_d_tens, H_d_tens_trans, H_d, G_lt, G_d, variance_term_diag, Sigma, rhs, vectorized_W
+            W_norm.append(sum([np.linalg.norm(self.W[d]) for d in range(self.D)]))
+
                 # print(f"||W|| = {np.linalg.norm(vectorized_W[d])}")
                 # print(f"||G|| = {np.linalg.norm(G_d)}")
                 # print(f"||H|| = {np.linalg.norm(H_d)}")
@@ -109,12 +116,12 @@ class BTTKM:
                     # lambda_mat_next = np.diag(self.lambda_R[d + 1])  # R_{d+1} x R_{d+1}
                     # lambda_mat_prev = np.diag(self.lambda_R[d])  # R_d x R_d
                     # delta_mat = np.diag(self.delta[d])  # M_d x M_d
-                    # temp = np.linalg.inv(self.Sigma[d]) - np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
+                    # temp = np.linalg.solve(self.Sigma[d], np.eye(self.R[d]*self.M[d]*self.R[d + 1])) - np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
                     # temp += np.kron(np.kron(lambda_mat_next, np.eye(self.M[d])), lambda_mat_prev)
-                    # temp = np.linalg.inv(temp)
+                    # temp = np.linalg.solve(temp, np.eye(temp.shape[0]))
                     # variance_tensor_d = np.diag(temp).reshape(tensor_shape, order='F')
 
-                    variance_tensor_d = np.diag(self.Sigma[d]).reshape(tensor_shape, order='F')
+                    variance_tensor_d = self.covar[d].reshape(tensor_shape, order='F', copy=False)
 
                     variance_matrix_d = np.vstack([variance_tensor_d[:, i, :].reshape(1, -1).flatten() for i in
                                                    range(variance_tensor_d.shape[1])])
@@ -132,7 +139,7 @@ class BTTKM:
                             indeces = np.where(~pruning_mask)[0].tolist()
                             self.feature_map[d] = self.feature_map[d][:][indeces]
 
-            del_norm.append(np.linalg.norm(self.h_N))
+                del_norm.append(np.linalg.norm(self.h_N))
             # posterior update lambda
             if lambda_update:
                 for d in range(1, self.D):
@@ -148,15 +155,15 @@ class BTTKM:
 
                     expectation1_term1 = np.diag(W_3@np.kron(Delta_d_1, Lambda_d_min_1)@W_3.T)
 
-                    # lambda_mat_next = np.diag(self.lambda_R[d])  # R_{d+1} x R_{d+1}
-                    # lambda_mat_prev = np.diag(self.lambda_R[d-1])  # R_d x R_d
-                    # delta_mat = np.diag(self.delta[d-1])  # M_d x M_d
+                    lambda_mat_next = np.diag(self.lambda_R[d])  # R_{d+1} x R_{d+1}
+                    lambda_mat_prev = np.diag(self.lambda_R[d-1])  # R_d x R_d
+                    delta_mat = np.diag(self.delta[d-1])  # M_d x M_d
                     # temp = np.linalg.inv(self.Sigma[d-1]) - np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
                     # temp += np.kron(np.kron(np.eye(self.R[d]), delta_mat), lambda_mat_prev)
                     # temp = np.linalg.inv(temp)
                     # V_d = np.diag(temp).reshape(self.R[d-1], self.M[d-1], self.R[d], order='F')
 
-                    V_d = np.diag(self.Sigma[d-1]).reshape(self.R[d-1], self.M[d-1], self.R[d], order='F')
+                    V_d = self.covar[d-1].reshape(self.R[d-1], self.M[d-1], self.R[d], order='F', copy=False)
                     V_d_3 = np.vstack([V_d[:,:,i].T.reshape(1,-1).flatten() for i in range(V_d.shape[2])])
                     expectation1_term2 = V_d_3@np.kron(self.delta[d-1], self.lambda_R[d-1])
                     expectation1 = expectation1_term1 + expectation1_term2
@@ -171,7 +178,7 @@ class BTTKM:
                     # temp = np.linalg.inv(temp)
                     # V_d = np.diag(temp).reshape(self.R[d], self.M[d], self.R[d+1], order='F')
 
-                    V_d = np.diag(self.Sigma[d]).reshape(self.R[d], self.M[d], self.R[d+1], order='F')
+                    V_d = self.covar[d].reshape(self.R[d], self.M[d], self.R[d+1], order='F', copy=False)
                     V_d_1 = np.vstack([V_d[i,:,:].T.reshape(1,-1).flatten() for i in range(V_d.shape[0])])
 
                     expectation2_term2 = V_d_1@np.kron(self.lambda_R[d+1], self.delta[d])
@@ -185,22 +192,22 @@ class BTTKM:
                         if any(pruning_mask):
                             self.W[d] = self.W[d][~pruning_mask]
                             self.W[d-1] = self.W[d-1][:,:,~pruning_mask]
-                            Sigma_d_tensor = self.Sigma[d].reshape([self.R[d], self.M[d], self.R[d+1], self.R[d], self.M[d], self.R[d+1]], order='F')
+                            Sigma_d_tensor = self.Sigma_inv[d].reshape([self.R[d], self.M[d], self.R[d+1], self.R[d], self.M[d], self.R[d+1]], order='F', copy=False)
                             Sigma_d_tensor = np.delete(Sigma_d_tensor, pruning_mask, axis=0)
                             Sigma_d_tensor = np.delete(Sigma_d_tensor, pruning_mask, axis=3)
-                            Sigma_d_min_tensor = self.Sigma[d-1].reshape(self.R[d-1], self.M[d-1], self.R[d], self.R[d-1], self.M[d-1], self.R[d], order='F')
+                            Sigma_d_min_tensor = self.Sigma_inv[d-1].reshape(self.R[d-1], self.M[d-1], self.R[d], self.R[d-1], self.M[d-1], self.R[d], order='F', copy=False)
                             Sigma_d_min_tensor = np.delete(Sigma_d_min_tensor, pruning_mask, axis=2)
                             Sigma_d_min_tensor = np.delete(Sigma_d_min_tensor, pruning_mask, axis=5)
                             self.R[d] = sum(~pruning_mask)
                             self.lambda_R[d] = self.lambda_R[d][~pruning_mask]
-                            self.Sigma[d] = Sigma_d_tensor.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F')
-                            self.Sigma[d-1] = Sigma_d_min_tensor.reshape([self.R[d-1]*self.M[d-1]*self.R[d], self.R[d-1]*self.M[d-1]*self.R[d]], order='F')
+                            self.Sigma_inv[d] = Sigma_d_tensor.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F', copy=False)
+                            self.Sigma_inv[d-1] = Sigma_d_min_tensor.reshape([self.R[d-1]*self.M[d-1]*self.R[d], self.R[d-1]*self.M[d-1]*self.R[d]], order='F', copy=False)
                             c_0[d] = c_0[d][~pruning_mask]
                             d_0[d] = d_0[d][~pruning_mask]
                             self.c_N[d] = self.c_N[d][~pruning_mask]
                             self.d_N[d] = self.d_N[d][~pruning_mask]
 
-            lam_norm.append([np.linalg.norm(self.lambda_R[d]) for d in range(self.D)])
+                lam_norm.append([np.linalg.norm(self.lambda_R[d]) for d in range(self.D)])
             # noise precision update
             if tau_update:
                 self.a_N = a_0 + self.N / 2
@@ -209,22 +216,22 @@ class BTTKM:
                 frob_errors = np.linalg.norm(Y)**2 - 2*Y@Expectation_G + Expectation_H
                 self.b_N = b_0 + 0.5 * frob_errors
                 self.expectation_tau = self.a_N / self.b_N
-
             predictions = self.predict(X)
-            error_term = 0.5*self.expectation_tau* np.linalg.norm(Y.reshape(self.N,1) - predictions)**2
+            error_term = 0.5*self.expectation_tau* np.linalg.norm(Y.reshape((self.N,1), copy=False) - predictions)**2
 
             L2_norms = 0
             ln_q_W = 0
             lambda_term = 0
             delta_term = 0
+
             for d in range(self.D):
                 lambda_mat_next = np.diag(self.lambda_R[d + 1])  # R_{d+1} x R_{d+1}
                 lambda_mat_prev = np.diag(self.lambda_R[d])  # R_d x R_d
                 delta_mat = np.diag(self.delta[d])  # M_d x M_d
                 variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
 
-                L2_norms += np.trace(variance_term @ (np.outer(self.W[d].reshape((-1,1), order='F'), self.W[d].reshape((-1,1), order='F')) + np.diag(np.diag(self.Sigma[d]))))
-                ln_q_W += 0.5*np.log(np.linalg.norm(self.Sigma[d])) + (self.R[d]*self.M[d]/2)*(1+np.log(2*np.pi))
+                L2_norms += np.trace(variance_term @ (np.outer(self.W[d].reshape((-1,1)), self.W[d].reshape((-1,1))) + np.diag(self.covar[d])))
+                ln_q_W += 0.5*np.log(1/np.linalg.norm(self.Sigma_inv[d])) + (self.R[d]*self.M[d]/2)*(1+np.log(2*np.pi))
                 for r in range(self.R[d]):
                     lambda_term += np.log(gamma(self.c_N[d][r])) + (1-np.log(self.d_N[d][r])- (d_0[d][r]/self.d_N[d][r]))*self.c_N[d][r]
                 for m in range(self.M[d]):
@@ -232,41 +239,52 @@ class BTTKM:
 
             tau_term = np.log(gamma(self.a_N)) + (1 - np.log(self.b_N) - (b_0/self.b_N))*self.a_N
             ELBO.append(-error_term - L2_norms - ln_q_W - lambda_term - delta_term - tau_term)
+            if it > 2:
+                LB_rel_chan = (ELBO[-1] - ELBO[-2])/ELBO[2]
+            else:
+                LB_rel_chan = np.nan
+            del predictions, tau_term
             it += 1
-            print(f"it: {it}, ELBO: {ELBO[it]}")
-            if abs(ELBO[-1] - ELBO[-2]) < error_bound:
+            # Display progress for every iteration
+            pbar.set_postfix(
+                {
+                    "rel chan": f"{LB_rel_chan:.4f}",
+                    "Fit": f"{ELBO[-1]:.4f}",
+                    "err": f"{error_term:.1e}",
+                }
+            )
+            if LB_rel_chan < error_bound:
                 print("Convergence bound reached, exiting")
                 break
-            # if ELBO[-1] > best_ELBO:
-            #     best_ELBO = ELBO[-1]
-            #     best_cores = self.W
-            #     worse_itters = 0
-            # else:
-            #     worse_itters +=1
-            #     if worse_itters >= 20 and it>40:
-            #         self.W = best_cores
-            #         print("Early stopping")
-            #         break
+            if W_norm[-1] < 1e-6:
+                print("model collapsed")
+                break
         if it == iteration_limit:
             print("Iteration limit reached, exiting")
 
-        fig, ax1 = plt.subplots()
-        ax1.plot(ELBO, label='ELBO')
-        ax2 = ax1.twinx()
-        if lambda_update:
-            ax2.plot(lam_norm, color="red", label=r"$||\lambda||$")
-        if delta_update:
-            ax2.plot(del_norm, color="purple", label=r"$||\delta||$")
-        ax2.plot(W_norm, color="orange", label=r"$||\boldsymbol{\mathcal{W}}||$")
-        ax1.set_title("Training ELBO")
-        ax1.set_xlabel("iteration")
-        ax1.set_ylabel("ELBO")
-        ax2.set_ylabel(r"$||\cdot||$")
-        fig.legend()
-        plt.show()
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics('lineno')
+        for stat in top_stats[:10]:
+            print(stat)
+
+        if plotting:
+            fig, ax1 = plt.subplots()
+            ax1.plot(ELBO, label='ELBO')
+            ax2 = ax1.twinx()
+            if lambda_update:
+                ax2.plot(lam_norm, color="red", label=r"$||\lambda||$")
+            if delta_update:
+                ax2.plot(del_norm, color="purple", label=r"$||\delta||$")
+            ax2.plot(W_norm, color="orange", label=r"$||\boldsymbol{\mathcal{W}}||$")
+            ax1.set_title("Training ELBO")
+            ax1.set_xlabel("iteration")
+            ax1.set_ylabel("ELBO")
+            ax2.set_ylabel(r"$||\cdot||$")
+            fig.legend()
+            plt.show()
 
     def predict(self, X):
-        self.feature_map = self.kernel(X, max(self.M), self.D)
+        self.feature_map = self.kernel(X, max(self.M))
         return self.forward_accumulator_G(self.D)
 
     def forward_accumulator_G(self, d):
@@ -292,7 +310,7 @@ class BTTKM:
             # R_d R_d M_d M_d x R_{d+1}**2
 
             covariance_shape = (self.R[k], self.M[k], self.R[k+1], self.R[k], self.M[k], self.R[k+1])
-            covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(covariance_shape, order='F') # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
+            covariance_WW = np.diag(self.covar[k]).reshape(covariance_shape, order='F') # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
             covariance_WW = np.transpose(covariance_WW, [0,3, 1,4, 2,5]) # R_d x R_d x M_d x M_d x R_{d+1} x R_{d+1}
             covariance_WW = covariance_WW.reshape([(self.R[k]*self.M[k])**2, self.R[k+1]**2], order='F')
             # R_d R_d M_d M_d x R_{d+1} R_{d+1}
@@ -314,7 +332,7 @@ class BTTKM:
             # R_{d+1} R_{d+1} M_d M_d x R_d**2
 
             covariance_shape = (self.R[k], self.M[k], self.R[k+1], self.R[k], self.M[k], self.R[k+1])
-            covariance_WW = np.diag(np.diag(self.Sigma[k])).reshape(covariance_shape, order='F') # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
+            covariance_WW = np.diag(self.covar[k]).reshape(covariance_shape, order='F') # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
             covariance_WW = np.transpose(covariance_WW, [2,5,1,4,0,3]) # R_{d+1} x R_{d+1} x M_d x M_d x R_d x R_d
             covariance_WW = covariance_WW.reshape([(self.M[k]*self.R[k+1])**2, self.R[k]**2], order='F') # R_{d+1} R_{d+1} M_d M_d x R_d R_d
             expectation_WW = np.add(mean_WW, covariance_WW)

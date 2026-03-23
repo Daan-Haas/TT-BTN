@@ -1,8 +1,4 @@
-import matplotlib.pyplot as plt
-
-from toy_data import generate_pure_power_dataset
-from utils import *
-from model import *
+from models.TT_model import *
 from toy_data import *
 
 seed = 101
@@ -18,7 +14,7 @@ ranks = [5 for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
 dims = [I for _ in range(D)] # dimensionality of kernels
 
-X_train, Y_train, X_test, Y_test, ground_truth = generate_pure_power_dataset(D, 3, 5, N, 0)
+X_train, Y_train, X_test, Y_test = generate_pure_power_dataset(D, 3, 5, 3, 5, N, update='both')
 
 model = BTTKM(D, ranks, [I + 2 for _ in range(D)], pure_power_features_full)
 model.train(X_train, Y_train, iteration_limit=400, delta_update=True, lambda_update=True)

@@ -1,11 +1,8 @@
-import matplotlib.pyplot as plt
-
-from utils import *
-from model import *
+from models.TT_model import *
 from toy_data import *
 
 seed = 101
-np.random.seed(seed)
+# np.random.seed(seed)
 ### Data settings ###
 I = 5 #
 N = 100 # Number of data points
@@ -13,16 +10,12 @@ noise_var = 0.01 # Noise variance
 
 ### Model settings ###
 D = 3 # Number of cores
-ranks = [3 for _ in range(D-1)] # Tensor-train ranks
-ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
-dims = [I for _ in range(D)] # dimensionality of kernels
-
-X_train, Y_train, X_test, Y_test, ground_truth = generate_pure_power_dataset(3, 3, 5, N, noise_var)
+X_train, Y_train, X_test, Y_test, = generate_pure_power_dataset(3, 5, 5, 3, 5, N, noise_var, update='lambda')
 
 ranks = [5 for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
 model = BTTKM(D, ranks, [I for _ in range(D)], pure_power_features_full)
-model.train(X_train, Y_train, lambda_update=True, iteration_limit=400)
+model.train(X_train, Y_train, lambda_update=True, iteration_limit=200)
 results = model.predict(X_test)
 train_results = model.predict(X_train)
 plt.scatter(X_train[:, 0], Y_train, label='ground truth')

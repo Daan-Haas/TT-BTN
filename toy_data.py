@@ -1,8 +1,9 @@
 import numpy as np
 
-from model import BTTKM
-from kernels import quadratic_kernel, pure_power_features_full, no_kernel
-from utils import khatri_rao, unfold
+from models.TT_model import BTTKM
+from kernels import quadratic_kernel, pure_power_features_full
+from utils import unfold, khatri_rao
+
 
 def generate_lin_dataset(dimensionality, number_data_points, noise_variance):
     parameters = np.random.normal(0,1, dimensionality)
@@ -35,25 +36,33 @@ def generate_quadratic_dataset(dimensionality, number_data_points, noise_varianc
     Y_test = model.predict(X_test) + np.random.normal(0, noise_variance, (number_data_points,1))
     return X_train, Y_train.T, X_test, Y_test, model
 
-def generate_pure_power_dataset(D_model, D_features, M, number_data_points, noise_variance):
+def generate_pure_power_dataset(D, M_true, M_max, R_true, R_max, N, noise_variance=0, update='both'):
     print("generating dataset")
-    X_train = np.random.uniform(-1, 1, (number_data_points, D_model))
-    X_test = np.random.uniform(-1, 1, (number_data_points, D_model))
+    X_train = np.random.standard_normal((N, D))
+    X_test = np.random.normal(0, 1, (N, D))
+    feature_map_train = pure_power_features_full(X_train, M_max)
+    feature_map_test = pure_power_features_full(X_test, M_max)
 
-    if D_features > 1:
-        X_train_gen = pure_power_features_full(X_train, D_features, 1).transpose(1,0,2)
-        X_train_gen = X_train_gen.reshape(100,D_model*D_features)
-        X_test_gen = pure_power_features_full(X_test, D_features, 1).transpose(1,0,2)
-        X_test_gen = X_test_gen.reshape(100,D_model*D_features)
-
+    if update in ['delta', 'both']:
+        M = [np.random.choice(range(M_true, M_max)) for _ in range(D)]
+        print(f"M = {M}")
     else:
-        X_train_gen = X_train
-        X_test_gen = X_test
+        M = [M_max for _ in range(D)]
+    if update in ['lambda', 'both']:
+        R = [np.random.choice(range(R_true, R_max)) for _ in range(D-1)]
+        print(f"R = {R}")
+    else:
+        R = [R_max for _ in range(D-1)]
+    R = [1] + R + [1]
+    feature_map_train = [feature_map_train[d,:,:M[d]] for d in range(D)]
+    feature_map_test = [feature_map_test[d,:,:M[d]] for d in range(D)]
+    W = [0.25*np.random.random([R[i],M[i],R[i+1]]) for i in range(D)]
+    Y_train = np.ones((N, 1))  # N x 1
+    Y_test = np.ones((N, 1))
+    for d in range(D):
+        Y_train = khatri_rao(feature_map_train[d], Y_train) @ unfold(W[d], 3).T  # (N x R_d M_d)(R_d M_d x R_{d+1})
+        Y_test = khatri_rao(feature_map_test[d], Y_test) @ unfold(W[d], 3).T
 
-    ranks = [3 for _ in range(int(D_model*D_features - 1))]
-    ranks = [1]+ ranks + [1]
-    dims = [M for _ in range(int(D_model*D_features))]
-    model = BTTKM(D_model*D_features, ranks, dims, pure_power_features_full)
-    Y_train = model.predict(X_train_gen) + np.random.normal(0, scale=noise_variance, size=(number_data_points,1))
-    Y_test = model.predict(X_test_gen) + np.random.normal(0, noise_variance, (number_data_points,1))
-    return X_train, Y_train, X_test, Y_test, model
+    Y_train = Y_train + np.random.normal(0, noise_variance)
+    Y_test = Y_test + np.random.normal(0,noise_variance)
+    return X_train, Y_train/np.linalg.norm(Y_train), X_test, Y_test/np.linalg.norm(Y_test)
