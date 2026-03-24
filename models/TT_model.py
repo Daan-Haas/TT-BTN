@@ -6,8 +6,6 @@ from kernels import *
 from utils import khatri_rao, unfold
 from tqdm import tqdm, trange
 
-import tracemalloc
-
 class BTTKM:
     def __init__(self, nr_cores, ranks, M, kernel):
         if (len(M) != nr_cores) or (len(ranks) != nr_cores+1):
@@ -47,7 +45,6 @@ class BTTKM:
         print("Training")
         self.feature_map = self.kernel(X, max(self.M))
 
-        tracemalloc.start()
         self.N = X.shape[0]
         self.a_N = a_0
         self.b_N = b_0
@@ -261,11 +258,6 @@ class BTTKM:
                 break
         if it == iteration_limit:
             print("Iteration limit reached, exiting")
-
-        snapshot = tracemalloc.take_snapshot()
-        top_stats = snapshot.statistics('lineno')
-        for stat in top_stats[:10]:
-            print(stat)
 
         if plotting:
             fig, ax1 = plt.subplots()

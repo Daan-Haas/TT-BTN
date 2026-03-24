@@ -2,16 +2,19 @@ import matplotlib.pyplot as plt
 
 from models.CPD_model import *
 from models.TT_model import *
-from toy_data import generate_pure_power_dataset
+from toy_data import generate_pure_power_dataset, generate_dense_dataset
 
 max_rank = 3
-max_tries = 5
-input_dimensions = [50, 100, 150]
+max_tries = 100
+scales = [0.01, 0.1, 1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12]
 
 all_CPD_failures = []
 all_TT_failures = []
+N = 100
+M = 3
+D = 10
 
-for D in input_dimensions:
+for scale in scales:
     a, b = 1e-2, 1e-3
     c, d = 1e-6 * np.ones(max_rank), 1e-6 * np.ones(max_rank)
     g, h = 1e-6 * np.ones(max_rank), 1e-6 * np.ones(max_rank)
@@ -20,8 +23,7 @@ for D in input_dimensions:
     CPD_failures = 0
     TT_failures = 0
     while tries < max_tries:
-        X_train, Y_train, X_test, Y_test = generate_pure_power_dataset(D,3,3, 3, 3, 100,
-                                                                       update='neither')
+        X, Y = generate_dense_dataset(N,D,M, scale)
         CPD_model = btnkm(D,3, 3)
 
         ranks = [max_rank for _ in range(D-1)]
@@ -39,7 +41,7 @@ for D in input_dimensions:
         TT_model.W[D-1] = CPD_model.W_D[D-1].reshape(3,3,1)
 
 
-        CPD_model.train(X_train, Y_train, 3, max_rank,
+        CPD_model.train(X, Y, 3, max_rank,
                     shape_parameter_tau=a,
                     scale_parameter_tau=b,
                     shape_parameter_lambda=c,
@@ -50,7 +52,7 @@ for D in input_dimensions:
                     plot_results=False
                     )
 
-        TT_model.train(X_train, Y_train,
+        TT_model.train(X, Y,
                        a_0=a, b_0=b,
                        c_0=c, d_0=d,
                        g_0=g, h_0=h,
@@ -68,11 +70,12 @@ for D in input_dimensions:
     all_CPD_failures.append(CPD_failures)
     all_TT_failures.append(TT_failures)
 
-plt.plot(input_dimensions, all_CPD_failures, label='CPD')
-plt.plot(input_dimensions, all_TT_failures, label='TT')
+plt.plot(scales, all_CPD_failures, label='CPD')
+plt.plot(scales, all_TT_failures, label='TT')
 plt.title("Occurrences of over or underflow")
-plt.xlabel("Dimension")
+plt.xlabel("ground truth scale")
 plt.ylabel("number of over/underflow issues")
+plt.xscale("log")
 plt.legend()
 plt.savefig('breaking_point.png')
 plt.show()

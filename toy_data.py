@@ -39,7 +39,7 @@ def generate_quadratic_dataset(dimensionality, number_data_points, noise_varianc
 def generate_pure_power_dataset(D, M_true, M_max, R_true, R_max, N, noise_variance=0, update='both'):
     print("generating dataset")
     X_train = np.random.standard_normal((N, D))
-    X_test = np.random.normal(0, 1, (N, D))
+    X_test = np.random.standard_normal((N, D))
     feature_map_train = pure_power_features_full(X_train, M_max)
     feature_map_test = pure_power_features_full(X_test, M_max)
 
@@ -66,3 +66,12 @@ def generate_pure_power_dataset(D, M_true, M_max, R_true, R_max, N, noise_varian
     Y_train = Y_train + np.random.normal(0, noise_variance)
     Y_test = Y_test + np.random.normal(0,noise_variance)
     return X_train, Y_train/np.linalg.norm(Y_train), X_test, Y_test/np.linalg.norm(Y_test)
+
+def generate_dense_dataset(N, D, M, scale=1, noise_variance=0):
+    X = np.random.standard_normal((N, D))
+    Phi = pure_power_features_full(X, M).transpose([1,0,2]).reshape(N,-1)
+
+    ground_truth = scale * np.random.standard_normal(D*M)
+
+    Y = Phi @ ground_truth
+    return X, Y
