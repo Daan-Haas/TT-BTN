@@ -25,7 +25,7 @@ class BTTKM:
         self.N = 100
 
     def init_cores(self):
-        core_list = [np.random.rand(self.R[i],self.M[i],self.R[i+1]) for i in range(self.D)]
+        core_list = [0.45*np.random.rand(self.R[i],self.M[i],self.R[i+1]) for i in range(self.D)]
         self.W = core_list
 
     def train(self,
@@ -87,7 +87,11 @@ class BTTKM:
 
                 variance_term_diag = np.kron(np.kron(self.lambda_R[d+1], self.delta[d]), self.lambda_R[d]) # R_d M_d R_{d+1} x R_d M_d R_{d+1}
                 self.Sigma_inv[d] = np.add(self.expectation_tau*H_d, np.diag(variance_term_diag)) # R_d M_d R_{d+1} x R_d M_d R_{d+1}
-                Sigma = np.linalg.inv(self.Sigma_inv[d])
+                try:
+                    Sigma = np.linalg.inv(self.Sigma_inv[d])
+                except:
+                    print("Sigma became singular")
+                    break
                 self.covar[d] = np.diag(Sigma)
                 rhs = G_d.T@Y.reshape(-1,1)
                 vectorized_W = self.expectation_tau*np.linalg.solve(self.Sigma_inv[d], rhs)
