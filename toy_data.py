@@ -69,9 +69,9 @@ def generate_pure_power_dataset(D, M_true, M_max, R_true, R_max, N, noise_varian
 
 def generate_dense_dataset(N, D, M, scale=1, noise_variance=0):
     X = np.random.standard_normal((N, D))
-    Phi = pure_power_features_full(X, M).transpose([1,0,2]).reshape(N,-1)
+    Phi = pure_power_features_full(X, M**2).transpose([1,0,2]).reshape(N,-1)
 
-    ground_truth = scale * np.random.standard_normal(D*M)
+    ground_truth = scale * np.random.standard_normal(D*M**2)
 
     Y = Phi @ ground_truth
     return X, Y

@@ -6,7 +6,7 @@ from toy_data import generate_pure_power_dataset, generate_dense_dataset
 
 max_rank = 3
 max_tries = 100
-scales = [0.001, 0.01, 0.1, 1e4, 1e7, 1e8, 1e9, 1e10, 1e11]
+scales = [1e-2, 1e4, 1e7, 1e10, 1e13]
 
 all_CPD_failures = []
 all_TT_failures = []
@@ -23,6 +23,7 @@ for scale in scales:
     CPD_failures = 0
     TT_failures = 0
     while tries < max_tries:
+        np.random.seed(tries)
         X, Y = generate_dense_dataset(N,D,M, scale)
         CPD_model = btnkm(D,3, 3)
 
