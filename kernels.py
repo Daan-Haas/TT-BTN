@@ -1,7 +1,7 @@
 import numpy as np
 
-def no_kernel(X, M, D):
-    return np.array([X for _ in range(D)])
+def no_kernel(X, D):
+    return X.reshape(X.shape[1], X.shape[0],1)
 
 def quadratic_kernel(X, D):
     Phi = np.zeros((D, X.shape[0], X.shape[1]))

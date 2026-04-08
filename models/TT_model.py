@@ -22,7 +22,6 @@ class BTTKM:
         self.Sigma = [np.eye(size[d]) for d in range(self.D)]
         self.covar = [np.ones(size[d]) for d in range(self.D)]
         self.kernel = kernel
-        self.N = 100
 
     def init_cores(self):
         core_list = [np.random.rand(self.R[i],self.M[i],self.R[i+1]) for i in range(self.D)]
@@ -49,6 +48,7 @@ class BTTKM:
         self.b_N = b_0
         self.expectation_tau = a_0 / b_0
 
+        rank_tol = 1e-5
         c_0 = [1e-6 * np.ones(self.R[d]) for d in range(self.D+1)]
         self.c_N = c_0.copy()
         d_0 = [1e-6 * np.ones(self.R[d]) for d in range(self.D+1)]
@@ -64,6 +64,7 @@ class BTTKM:
         del_norm = []
 
         W_norm = []
+        collapsed = False
 
         ELBO = [-np.inf]
         it = 0
@@ -182,27 +183,48 @@ class BTTKM:
                     self.d_N[d] = np.add(d_0[d], 0.5 * (expectation1 + expectation2))
 
                     self.lambda_R[d] = self.c_N[d] / self.d_N[d]
+
                     if rank_pruning:
-                        pruning_mask = self.lambda_R[d] > 1000
-                        if any(pruning_mask):
-                            self.W[d] = self.W[d][~pruning_mask]
-                            self.W[d-1] = self.W[d-1][:,:,~pruning_mask]
-                            Sigma_d_tensor = self.Sigma_inv[d].reshape([self.R[d], self.M[d], self.R[d+1], self.R[d], self.M[d], self.R[d+1]], order='F', copy=False)
-                            Sigma_d_tensor = np.delete(Sigma_d_tensor, pruning_mask, axis=0)
-                            Sigma_d_tensor = np.delete(Sigma_d_tensor, pruning_mask, axis=3)
-                            Sigma_d_min_tensor = self.Sigma_inv[d-1].reshape(self.R[d-1], self.M[d-1], self.R[d], self.R[d-1], self.M[d-1], self.R[d], order='F', copy=False)
-                            Sigma_d_min_tensor = np.delete(Sigma_d_min_tensor, pruning_mask, axis=2)
-                            Sigma_d_min_tensor = np.delete(Sigma_d_min_tensor, pruning_mask, axis=5)
-                            self.R[d] = sum(~pruning_mask)
-                            self.lambda_R[d] = self.lambda_R[d][~pruning_mask]
-                            self.Sigma_inv[d] = Sigma_d_tensor.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F', copy=False)
-                            self.Sigma_inv[d-1] = Sigma_d_min_tensor.reshape([self.R[d-1]*self.M[d-1]*self.R[d], self.R[d-1]*self.M[d-1]*self.R[d]], order='F', copy=False)
+                        Wall = unfold(self.W[d], 1)
+                        comPower = np.diag(Wall @ Wall.T)
+                        var_explained = comPower / np.sum(comPower) * 100
+                        rankest = np.sum(var_explained > rank_tol)
+                        print(rankest)
+                        if rankest == 0:
+                            collapsed = True
+                            break
+
+                        if self.R[d] != rankest:
+                            pruning_mask = [var_explained > rank_tol]
+                            pruning_mask = pruning_mask[0]
+                            self.W[d] = self.W[d][pruning_mask]
+                            self.W[d-1] = self.W[d-1][:,:,pruning_mask]
+                            Sigma_d_tensor = self.Sigma[d].reshape([self.R[d], self.M[d], self.R[d+1], self.R[d], self.M[d], self.R[d+1]], order='F', copy=False)
+                            Sigma_d_tensor = np.delete(Sigma_d_tensor, ~pruning_mask, axis=0)
+                            Sigma_d_tensor = np.delete(Sigma_d_tensor, ~pruning_mask, axis=3)
+                            Sigma_d_min_tensor = self.Sigma[d-1].reshape(self.R[d-1], self.M[d-1], self.R[d], self.R[d-1], self.M[d-1], self.R[d], order='F', copy=False)
+                            Sigma_d_min_tensor = np.delete(Sigma_d_min_tensor, ~pruning_mask, axis=2)
+                            Sigma_d_min_tensor = np.delete(Sigma_d_min_tensor, ~pruning_mask, axis=5)
+                            covar_d_tensor = self.covar[d].reshape([self.R[d], self.M[d], self.R[d+1]], order='F', copy=False)
+                            covar_d_tensor = np.delete(covar_d_tensor, ~pruning_mask, axis=0)
+                            covar_d_min_tensor = self.covar[d-1].reshape([self.R[d-1], self.M[d], self.R[d]], order='F', copy=False)
+                            covar_d_min_tensor = np.delete(covar_d_min_tensor, ~pruning_mask, axis=2)
+                            self.R[d] = sum(pruning_mask)
+                            self.lambda_R[d] = self.lambda_R[d][pruning_mask]
+                            self.Sigma[d] = Sigma_d_tensor.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F')
+                            self.Sigma[d-1] = Sigma_d_min_tensor.reshape([self.R[d-1]*self.M[d-1]*self.R[d], self.R[d-1]*self.M[d-1]*self.R[d]], order='F')
+                            self.covar[d] = covar_d_tensor.reshape([-1,1])
+                            self.covar[d-1] = covar_d_min_tensor.reshape([-1,1])
                             c_0[d] = c_0[d][~pruning_mask]
                             d_0[d] = d_0[d][~pruning_mask]
                             self.c_N[d] = self.c_N[d][~pruning_mask]
                             self.d_N[d] = self.d_N[d][~pruning_mask]
 
                 lam_norm.append([np.linalg.norm(self.lambda_R[d]) for d in range(self.D)])
+
+            if collapsed:
+                print("model collapsed")
+                break
             # noise precision update
             if tau_update:
                 self.a_N = a_0 + self.N / 2
@@ -228,7 +250,7 @@ class BTTKM:
                 L2_norms += np.trace(variance_term @ (np.outer(self.W[d].reshape((-1,1)), self.W[d].reshape((-1,1))) + np.diag(self.covar[d])))
                 ln_q_W += 0.5*np.log(np.linalg.norm(self.Sigma[d])) + (self.R[d]*self.M[d]/2)*(1+np.log(2*np.pi))
                 for r in range(self.R[d]):
-                    lambda_term += np.log(gamma(self.c_N[d][r])) + (1-np.log(self.d_N[d][r])- (d_0[d][r]/self.d_N[d][r]))*self.c_N[d][r]
+                    lambda_term += (1-np.log(self.d_N[d][r])- (d_0[d][r]/self.d_N[d][r]))*self.c_N[d][r] #+ np.log(gamma(self.c_N[d][r]))
                 for m in range(self.M[d]):
                     delta_term += np.log(gamma(self.g_N[d][m])) + (1-np.log(self.h_N[d][m]) - (h_0[d][m]/self.h_N[d][m]))*self.g_N[d][m]
 
@@ -252,9 +274,9 @@ class BTTKM:
             if LB_rel_chan < error_bound:
                 print("Convergence bound reached, exiting")
                 break
-            # if W_norm[-1] < 1e-100 or np.isnan(W_norm[-1]):
-            #     print("model collapsed")
-            #     break
+            if W_norm[-1] < 1e-100 or np.isnan(W_norm[-1]):
+                print("model collapsed")
+                break
         if it == iteration_limit:
             print("Iteration limit reached, exiting")
 
@@ -327,6 +349,7 @@ class BTTKM:
             covariance_WW = np.diag(self.covar[k]).reshape(covariance_shape, order='F') # R_d x M_d x R_{d+1} x R_d x M_d x R_{d+1}
             covariance_WW = np.transpose(covariance_WW, [2,5,1,4,0,3]) # R_{d+1} x R_{d+1} x M_d x M_d x R_d x R_d
             covariance_WW = covariance_WW.reshape([(self.M[k]*self.R[k+1])**2, self.R[k]**2], order='F') # R_{d+1} R_{d+1} M_d M_d x R_d R_d
+
             expectation_WW = np.add(mean_WW, covariance_WW)
 
             H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW

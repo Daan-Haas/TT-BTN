@@ -5,8 +5,8 @@ import numpy as np
 from models import TT_model
 from kernels import pure_power_features_full
 
-with open("data/yacht.csv") as yacht_data:
-    data = pd.read_csv(yacht_data, header=None)
+with open("data/concrete.csv") as concrete_data:
+    data = pd.read_csv(concrete_data, header=None)
     data = data.values[1:,:]
     data = data.astype(float)
 
@@ -35,14 +35,14 @@ for i in range(10):
 
     R = [10 for _ in range(D -1)]
     R = [1]+R+[1]
-    M = [20 for _ in range(D)]
+    M = [8 for _ in range(D)]
 
-    a, b = 1e2,1e-3
+    a, b = 1e1,1e-5
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
     model = TT_model.BTTKM(X_train.shape[1], R, M, pure_power_features_full)
-    model.train(X_train, Y_train, a_0=a, b_0=b, lambda_update=True, rank_pruning=True)
+    model.train(X_train, Y_train, a_0=a, b_0=b)
     predictions_mean = model.predict(X_test)
     predictions_mean_unscaled = predictions_mean*Y_std + Y_mean
     error = predictions_mean_unscaled - Y_test

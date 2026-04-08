@@ -5,12 +5,12 @@ from kernels import quadratic_kernel, pure_power_features_full
 from utils import unfold, khatri_rao
 
 
-def generate_lin_dataset(dimensionality, number_data_points, noise_variance):
+def generate_lin_dataset(dimensionality, M,  number_data_points, noise_variance):
     parameters = np.random.normal(0,1, dimensionality)
     noise = np.random.normal(0, noise_variance, dimensionality)
 
-    X_train = np.random.uniform(-1, 1, (number_data_points, dimensionality))
-    X_test = np.random.uniform(-1, 1, (number_data_points, dimensionality))
+    X_train = np.random.uniform(-1, 1, (dimensionality, M, number_data_points))
+    X_test = np.random.uniform(-1, 1, (dimensionality, M, number_data_points))
 
     Y_train = np.zeros(number_data_points)
     Y_test = np.zeros(number_data_points)
@@ -42,7 +42,7 @@ def generate_pure_power_dataset(D, M_true, M_max, R_true, R_max, N, noise_varian
     X_test = np.random.standard_normal((N, D))
     feature_map_train = pure_power_features_full(X_train, M_max)
     feature_map_test = pure_power_features_full(X_test, M_max)
-
+    print(feature_map_train.shape)
     if update in ['delta', 'both']:
         M = [np.random.choice(range(M_true, M_max)) for _ in range(D)]
         print(f"M = {M}")
@@ -56,7 +56,7 @@ def generate_pure_power_dataset(D, M_true, M_max, R_true, R_max, N, noise_varian
     R = [1] + R + [1]
     feature_map_train = [feature_map_train[d,:,:M[d]] for d in range(D)]
     feature_map_test = [feature_map_test[d,:,:M[d]] for d in range(D)]
-    W = [0.25*np.random.random([R[i],M[i],R[i+1]]) for i in range(D)]
+    W = [10*np.random.random([R[i],M[i],R[i+1]]) for i in range(D)]
     Y_train = np.ones((N, 1))  # N x 1
     Y_test = np.ones((N, 1))
     for d in range(D):
