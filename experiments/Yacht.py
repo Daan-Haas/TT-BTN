@@ -33,7 +33,7 @@ for i in range(10):
     D = X_train.shape[1]
     N = X_train.shape[0]
 
-    R = [10 for _ in range(D -1)]
+    R = [8 for _ in range(D -1)]
     R = [1]+R+[1]
     M = [20 for _ in range(D)]
 
@@ -42,7 +42,7 @@ for i in range(10):
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
     model = TT_model.BTTKM(X_train.shape[1], R, M, pure_power_features_full)
-    model.train(X_train, Y_train, a_0=a, b_0=b, lambda_update=True, rank_pruning=True)
+    model.train(X_train, Y_train, a_0=a, b_0=b)
     predictions_mean = model.predict(X_test)
     predictions_mean_unscaled = predictions_mean*Y_std + Y_mean
     error = predictions_mean_unscaled - Y_test

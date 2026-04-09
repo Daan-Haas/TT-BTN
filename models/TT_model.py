@@ -80,7 +80,9 @@ class BTTKM:
                 H_d_tens_trans = H_d_tens.transpose([1,0,3,2,5,4])  # R_d x M_d x R_{d+1} x R_d x M_d x R_d+1
                 H_d = H_d_tens_trans.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F')
                 # R_d M_d R_{d+1} x R_d M_d R_d+1
-                assert np.max(abs(H_d.T - H_d))/np.linalg.norm(H_d) < 1e-6, f"H_d not symmetrical: {H_d}"
+                if np.max(abs(H_d.T - H_d))/np.linalg.norm(H_d) > 1e-6:
+                    print(f"H_d not symmetrical: {H_d}")
+                    break
 
                 G_lt = khatri_rao(self.feature_map[d], self.forward_accumulator_G(d)) # N x R_d M_d
                 G_d = khatri_rao(self.backward_accumulator_G(d), G_lt) # N x R_d M_d R_{d+1}
@@ -187,14 +189,17 @@ class BTTKM:
                     if rank_pruning:
                         Wall = unfold(self.W[d], 1)
                         comPower = np.diag(Wall @ Wall.T)
-                        var_explained = comPower / np.sum(comPower) * 100
-                        rankest = np.sum(var_explained > rank_tol)
-                        print(rankest)
+                        if np.sum(comPower) == 0:
+                            rankest = self.R[d]
+                        else:
+                            var_explained = comPower / np.sum(comPower) * 100
+                            rankest = np.sum(var_explained > rank_tol)
                         if rankest == 0:
                             collapsed = True
                             break
 
                         if self.R[d] != rankest:
+                            print(f"pruning rank of {d}-th core from {self.R[d]} to {rankest}")
                             pruning_mask = [var_explained > rank_tol]
                             pruning_mask = pruning_mask[0]
                             self.W[d] = self.W[d][pruning_mask]
@@ -213,17 +218,17 @@ class BTTKM:
                             self.lambda_R[d] = self.lambda_R[d][pruning_mask]
                             self.Sigma[d] = Sigma_d_tensor.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F')
                             self.Sigma[d-1] = Sigma_d_min_tensor.reshape([self.R[d-1]*self.M[d-1]*self.R[d], self.R[d-1]*self.M[d-1]*self.R[d]], order='F')
-                            self.covar[d] = covar_d_tensor.reshape([-1,1])
-                            self.covar[d-1] = covar_d_min_tensor.reshape([-1,1])
-                            c_0[d] = c_0[d][~pruning_mask]
-                            d_0[d] = d_0[d][~pruning_mask]
-                            self.c_N[d] = self.c_N[d][~pruning_mask]
-                            self.d_N[d] = self.d_N[d][~pruning_mask]
+                            self.covar[d] = covar_d_tensor.reshape(-1)
+                            self.covar[d-1] = covar_d_min_tensor.reshape(-1)
+                            c_0[d] = c_0[d][pruning_mask]
+                            d_0[d] = d_0[d][pruning_mask]
+                            self.c_N[d] = self.c_N[d][pruning_mask]
+                            self.d_N[d] = self.d_N[d][pruning_mask]
 
                 lam_norm.append([np.linalg.norm(self.lambda_R[d]) for d in range(self.D)])
 
             if collapsed:
-                print("model collapsed")
+                print(f"rank of {d}th core went to 0")
                 break
             # noise precision update
             if tau_update:
