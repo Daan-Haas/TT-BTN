@@ -24,7 +24,7 @@ class BTTKM:
         self.kernel = kernel
 
     def init_cores(self):
-        core_list = [np.random.rand(self.R[i],self.M[i],self.R[i+1]) for i in range(self.D)]
+        core_list = [100*np.random.rand(self.R[i],self.M[i],self.R[i+1]) for i in range(self.D)]
         self.W = core_list
 
     def train(self,
@@ -48,7 +48,7 @@ class BTTKM:
         self.b_N = b_0
         self.expectation_tau = a_0 / b_0
 
-        rank_tol = 1e-5
+        rank_tol = 1e-4
         c_0 = [1e-6 * np.ones(self.R[d]) for d in range(self.D+1)]
         self.c_N = c_0.copy()
         d_0 = [1e-6 * np.ones(self.R[d]) for d in range(self.D+1)]
@@ -111,14 +111,6 @@ class BTTKM:
 
                     tensor_shape = (self.R[d], self.M[d], self.R[d + 1])
 
-                    # lambda_mat_next = np.diag(self.lambda_R[d + 1])  # R_{d+1} x R_{d+1}
-                    # lambda_mat_prev = np.diag(self.lambda_R[d])  # R_d x R_d
-                    # delta_mat = np.diag(self.delta[d])  # M_d x M_d
-                    # temp = np.linalg.solve(self.Sigma[d], np.eye(self.R[d]*self.M[d]*self.R[d + 1])) - np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
-                    # temp += np.kron(np.kron(lambda_mat_next, np.eye(self.M[d])), lambda_mat_prev)
-                    # temp = np.linalg.solve(temp, np.eye(temp.shape[0]))
-                    # variance_tensor_d = np.diag(temp).reshape(tensor_shape, order='F')
-
                     variance_tensor_d = self.covar[d].reshape(tensor_shape, order='F', copy=False)
 
                     variance_matrix_d = np.vstack([variance_tensor_d[:, i, :].reshape(1, -1).flatten() for i in
@@ -153,28 +145,12 @@ class BTTKM:
 
                     expectation1_term1 = np.diag(W_3@np.kron(Delta_d_1, Lambda_d_min_1)@W_3.T)
 
-                    lambda_mat_next = np.diag(self.lambda_R[d])  # R_{d+1} x R_{d+1}
-                    lambda_mat_prev = np.diag(self.lambda_R[d-1])  # R_d x R_d
-                    delta_mat = np.diag(self.delta[d-1])  # M_d x M_d
-                    # temp = np.linalg.inv(self.Sigma[d-1]) - np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
-                    # temp += np.kron(np.kron(np.eye(self.R[d]), delta_mat), lambda_mat_prev)
-                    # temp = np.linalg.inv(temp)
-                    # V_d = np.diag(temp).reshape(self.R[d-1], self.M[d-1], self.R[d], order='F')
-
                     V_d = self.covar[d-1].reshape(self.R[d-1], self.M[d-1], self.R[d], order='F', copy=False)
                     V_d_3 = np.vstack([V_d[:,:,i].T.reshape(1,-1).flatten() for i in range(V_d.shape[2])])
                     expectation1_term2 = V_d_3@np.kron(self.delta[d-1], self.lambda_R[d-1])
                     expectation1 = expectation1_term1 + expectation1_term2
 
                     expectation2_term1 = np.diag(W_1@np.kron(Lambda_d_plus_1, Delta_d)@W_1.T)
-
-                    # lambda_mat_next = np.diag(self.lambda_R[d+1])  # R_{d+1} x R_{d+1}
-                    # lambda_mat_prev = np.diag(self.lambda_R[d])  # R_d x R_d
-                    # delta_mat = np.diag(self.delta[d])  # M_d x M_d
-                    # temp = np.linalg.inv(self.Sigma[d]) - np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
-                    # temp += np.kron(np.kron(lambda_mat_next, delta_mat), np.eye(self.R[d]))
-                    # temp = np.linalg.inv(temp)
-                    # V_d = np.diag(temp).reshape(self.R[d], self.M[d], self.R[d+1], order='F')
 
                     V_d = self.covar[d].reshape(self.R[d], self.M[d], self.R[d+1], order='F', copy=False)
                     V_d_1 = np.vstack([V_d[i,:,:].T.reshape(1,-1).flatten() for i in range(V_d.shape[0])])
@@ -279,9 +255,9 @@ class BTTKM:
             if LB_rel_chan < error_bound:
                 print("Convergence bound reached, exiting")
                 break
-            if W_norm[-1] < 1e-100 or np.isnan(W_norm[-1]):
-                print("model collapsed")
-                break
+            # if W_norm[-1] < 1e-100 or np.isnan(W_norm[-1]):
+            #     print("model collapsed")
+            #     break
         if it == iteration_limit:
             print("Iteration limit reached, exiting")
 

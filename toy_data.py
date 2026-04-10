@@ -56,7 +56,7 @@ def generate_pure_power_dataset(D, M_true, M_max, R_true, R_max, N, noise_varian
     R = [1] + R + [1]
     feature_map_train = [feature_map_train[d,:,:M[d]] for d in range(D)]
     feature_map_test = [feature_map_test[d,:,:M[d]] for d in range(D)]
-    W = [10*np.random.random([R[i],M[i],R[i+1]]) for i in range(D)]
+    W = [100*np.random.random([R[i],M[i],R[i+1]]) for i in range(D)]
     Y_train = np.ones((N, 1))  # N x 1
     Y_test = np.ones((N, 1))
     for d in range(D):
@@ -65,7 +65,7 @@ def generate_pure_power_dataset(D, M_true, M_max, R_true, R_max, N, noise_varian
 
     Y_train = Y_train + np.random.normal(0, noise_variance)
     Y_test = Y_test + np.random.normal(0,noise_variance)
-    return X_train, Y_train/np.linalg.norm(Y_train), X_test, Y_test/np.linalg.norm(Y_test)
+    return X_train, Y_train/np.linalg.norm(Y_train), X_test, Y_test/np.linalg.norm(Y_test), W
 
 def generate_dense_dataset(N, D, M, scale=1, noise_variance=0):
     X = np.random.standard_normal((N, D))

@@ -42,11 +42,11 @@ for i in range(10):
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
     model = TT_model.BTTKM(X_train.shape[1], R, M, pure_power_features_full)
-    model.train(X_train, Y_train, a_0=a, b_0=b)
+    model.train(X_train, Y_train, a_0=a, b_0=b, lambda_update=True)
     predictions_mean = model.predict(X_test)
     predictions_mean_unscaled = predictions_mean*Y_std + Y_mean
     error = predictions_mean_unscaled - Y_test
-    # error = predictions_mean - Y_test
+
     RMSE.append(np.sqrt(np.sum(error**2)/N))
     plt.scatter(X_test[:,2], Y_test)
     plt.scatter(X_test[:,2],predictions_mean_unscaled)

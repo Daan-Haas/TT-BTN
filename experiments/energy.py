@@ -34,7 +34,7 @@ for i in range(10):
 
     R = [5 for i in range(X_train.shape[1] -1)]
     R = [1]+R+[1]
-    M = [8 for _ in range(X_train.shape[1])]
+    M = [20 for _ in range(X_train.shape[1])]
 
     a, b = 1, 1e-3
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
