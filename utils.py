@@ -13,7 +13,7 @@ def unfold(core, mode):
     if mode == 1:
         return np.vstack([core[i,:,:].reshape(1,-1).flatten() for i in range(core.shape[0])]) # R_d x R_{d+1} M_d
     elif mode == 2:
-        return np.vstack([core[:,i,:].reshape(1,-1).flatten() for i in range(core.shape[1])]) # M_d x R_d R_{d+1}
+        return np.vstack([core[:,i,:].T.reshape(1,-1).flatten() for i in range(core.shape[1])]) # M_d x R_d R_{d+1}
     elif mode == 3:
         return np.vstack([core[:,:,i].T.reshape(1,-1).flatten() for i in range(core.shape[2])]) # R_{d+1} x R_d M_d
     else:
@@ -31,14 +31,14 @@ def unfold(core, mode):
 
 def khatri_rao(A: ndarray, B: ndarray) -> ndarray:
     """
-    Khatri-Rao product (Columnwise Kronecker product)
+    Row wise Khatri-Rao product (Columnwise Kronecker product)
 
     Parameters:
-    :param A: (n, k) array_like
+    :param A: (k, n) array_like
         Input array A
-    :param B: (m, k) array_like
+    :param B: (k, m) array_like
         Input array B
-    :return: c: (n*m, k) ndarray
+    :return: c: (k, m*n) ndarray
     """
     A = np.asarray(A)
     B = np.asarray(B)

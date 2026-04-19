@@ -24,10 +24,10 @@ def pure_power_features_full(X, input_dimensions):
         Array of shape (n_features, n_samples, M) containing unit-norm pure-power features.
     """
     # Compute the pure-power features
-    Mati = np.power(X.T[:, :, np.newaxis], np.arange(input_dimensions))
+    Mati = np.power(X[:, :, np.newaxis], np.arange(input_dimensions))
     # Normalize each sample's features along the last axis to have a unit norm
     norms = np.linalg.norm(
         Mati, axis=2, keepdims=True
     )  # Compute norms along the power axis
     Mati = Mati / norms  # Normalize features to unit norm
-    return Mati
+    return Mati.transpose(1,0,2)

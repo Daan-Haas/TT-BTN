@@ -17,23 +17,18 @@ ranks = [R for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
 dims = [I for _ in range(D)] # dimensionality of kernels
 
-X_train, Y_train, X_test, Y_test, W = generate_pure_power_dataset(D,3, 5,3,3, N, 0, update='delta')
-# uninformative_train_features = noise_var * np.random.random([N,2])
-# X_train = np.append(X_train, uninformative_train_features, axis=1)
-#
-# uninformative_test_features = noise_var * np.random.random([N,2])
-# X_test = np.append(X_test, uninformative_test_features, axis=1)
+X_train, Y_train, X_test, Y_test, W = generate_pure_power_dataset(D,3, R, N, 0)
 
 
 model = BTTKM(D, ranks, [I for _ in range(D)], pure_power_features_full)
-print([model.W[d].shape for d in range(D)])
-for d in range(D):
-    changes = 0.1*np.random.rand(ranks[d], dims[d], ranks[d+1])
-    R_d, M_d, R_d_next = W[d].shape
-    model.W[d][:R_d,:M_d,:R_d_next] = W[d]
-    model.W[d] = model.W[d] + changes
-print([model.W[d].shape for d in range(D)])
-model.train(X_train, Y_train, iteration_limit=800, delta_update=True)
+# print([model.W[d].shape for d in range(D)])
+# for d in range(D):
+#     changes = 0.1*np.random.rand(ranks[d], dims[d], ranks[d+1])
+#     R_d, M_d, R_d_next = W[d].shape
+#     model.W[d][:R_d,:M_d,:R_d_next] = W[d]
+#     model.W[d] = model.W[d] + changes
+# print([model.W[d].shape for d in range(D)])
+model.train(X_train, Y_train, a_0=1e-2, b_0=1e-4, iteration_limit=800, delta_update=True)
 # filehandler = open("pretrained_models/delta_model", 'wb')
 # pickle.dump(model, filehandler)
 # pickled_model = open("delta_model", r)

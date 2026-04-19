@@ -5,7 +5,7 @@ import pandas as pd
 from models import TT_model
 from kernels import pure_power_features_full
 
-with open("data/energy.csv") as energy_data:
+with open("../data/energy.csv") as energy_data:
     data = pd.read_csv(energy_data, header=None)
     data = data.values[1:,:]
     data = data.astype(float)
@@ -36,7 +36,7 @@ for i in range(10):
     R = [1]+R+[1]
     M = [20 for _ in range(X_train.shape[1])]
 
-    a, b = 1, 1e-3
+    a, b = 1e-2, 1e-3
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 

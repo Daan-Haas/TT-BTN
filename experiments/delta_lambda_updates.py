@@ -14,10 +14,10 @@ ranks = [5 for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
 dims = [I for _ in range(D)] # dimensionality of kernels
 
-X_train, Y_train, X_test, Y_test = generate_pure_power_dataset(D, 3, 5, 3, 5, N, update='both')
+X_train, Y_train, X_test, Y_test, gt = generate_pure_power_dataset(D, 3, 3, N, 0)
 
-model = BTTKM(D, ranks, [I + 2 for _ in range(D)], pure_power_features_full)
-model.train(X_train, Y_train, iteration_limit=400, delta_update=True, lambda_update=True)
+model = BTTKM(D, ranks, [I for _ in range(D)], pure_power_features_full)
+model.train(X_train, Y_train, iteration_limit=400, delta_update=True, lambda_update=True, rank_pruning=True, feature_pruning=True)
 
 results = model.predict(X_test)
 train_results = model.predict(X_train)

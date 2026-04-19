@@ -10,12 +10,17 @@ noise_var = 0.01 # Noise variance
 
 ### Model settings ###
 D = 3 # Number of cores
-X_train, Y_train, X_test, Y_test, = generate_pure_power_dataset(3, 5, 5, 3, 5, N, noise_var, update='lambda')
+# X_train, Y_train, X_test, Y_test, ground_truth = generate_pure_power_dataset(3, 5, 5, 3, 5, N, noise_var, update='lambda')
 
+ranks = [3 for _ in range(D-1)] # Tensor-train ranks
+ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
+dims = [I for _ in range(D)] # dimensionality of kernels
+
+X_train, Y_train, X_test, Y_test, ground_truth = generate_pure_power_dataset(3, 3, 5, N, noise_var)
 ranks = [5 for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
 model = BTTKM(D, ranks, [I for _ in range(D)], pure_power_features_full)
-model.train(X_train, Y_train, lambda_update=True, iteration_limit=200)
+model.train(X_train, Y_train, a_0=1e-3, b_0=1e-5, lambda_update=True, iteration_limit=200)
 results = model.predict(X_test)
 train_results = model.predict(X_train)
 plt.scatter(X_train[:, 0], Y_train, label='ground truth')
@@ -44,8 +49,6 @@ for d in range(model.D):
 tau_term = np.log(gamma(model.a_N)) + (1 - np.log(model.b_N) - (1/model.b_N))*model.a_N
 ELBO = -error_term - L2_norms - ln_q_W - lambda_term - delta_term - tau_term
 
-for d in range(model.D):
-    print(f"core-{d}: {model.W[d]}")
 plt.scatter(X_test[:,0], Y_test, label="Ground truth")
 plt.scatter(X_test[:,0], results, label="Predicted", alpha=0.8)
 plt.title(f"predictions on Validation set, ELBO: {ELBO:.2e}")

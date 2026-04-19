@@ -5,13 +5,14 @@ import numpy as np
 from models import TT_model
 from kernels import pure_power_features_full
 
-with open("/data/concrete.csv") as concrete_data:
-    data = pd.read_csv(concrete_data, header=None)
+with open("data/airfoil.csv") as airfoil_data:
+    data = pd.read_csv(airfoil_data, header=None)
     data = data.values[1:,:]
     data = data.astype(float)
 
 X = data[:,:-1]
 Y = data[:,-1]
+print(X.shape)
 RMSE = []
 for i in range(10):
     np.random.seed(i)
@@ -30,10 +31,10 @@ for i in range(10):
     Y_std = Y_train.std()
     Y_train = (Y_train - Y_mean) / Y_std
 
-    D = X_train.shape[1]
-    N = X_train.shape[0]
+    D = X_train.shape[0]
+    N = X_train.shape[1]
 
-    R = [10 for _ in range(D -1)]
+    R = [5 for _ in range(D -1)]
     R = [1]+R+[1]
     M = [8 for _ in range(D)]
 
@@ -48,8 +49,8 @@ for i in range(10):
     error = predictions_mean_unscaled - Y_test
     # error = predictions_mean - Y_test
     RMSE.append(np.sqrt(np.sum(error**2)/N))
-    plt.scatter(X_test[:,2], Y_test, alpha=0.5)
-    plt.scatter(X_test[:,2],predictions_mean_unscaled, alpha=0.5)
+    plt.scatter(X_test[:,2], Y_test, alpha=0.7)
+    plt.scatter(X_test[:,2],predictions_mean_unscaled, alpha=0.7)
     plt.show()
     print(RMSE[-1])
 print(np.mean(RMSE))

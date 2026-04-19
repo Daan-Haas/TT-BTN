@@ -27,12 +27,14 @@ def test_unfoldings():
 
 def test_G_accumulators():
     D = 4  # Number of cores
+    N = 10
     I = 1
     ranks = [2 for _ in range(D - 1)]  # Tensor-train ranks
     ranks = [1] + ranks + [1]  # first and last rank must be 1 to maintain output dimension
     dims = [I for _ in range(D)]  # dimensionality of kernel
 
     X_train, Y_train = generate_dense_dataset(10, D, 2, 1, 0)
+    print("X in ", X_train.shape, f". should be {N}x{D}")
     model = BTTKM(D, ranks, dims, pure_power_features_full)
     model.train(X_train, Y_train, iteration_limit=0)
     assert np.allclose(model.forward_accumulator_G(model.D), model.backward_accumulator_G(-1), rtol=1e-6), 'forward and backward G accumulation errors'
