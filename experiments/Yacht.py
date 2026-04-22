@@ -5,7 +5,7 @@ import numpy as np
 from models import TT_model
 from kernels import pure_power_features_full
 
-with open("../data/yacht.csv") as yacht_data:
+with open("data/yacht.csv") as yacht_data:
     data = pd.read_csv(yacht_data, header=None)
     data = data.values[1:,:]
     data = data.astype(float)
@@ -13,6 +13,7 @@ with open("../data/yacht.csv") as yacht_data:
 X = data[:,:-1]
 Y = data[:,-1]
 RMSE = []
+nlls = []
 for i in range(10):
     np.random.seed(i)
     indices = np.random.permutation(len(X))
@@ -42,15 +43,24 @@ for i in range(10):
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
     model = TT_model.BTTKM(D, R, M, pure_power_features_full)
-    model.train(X_train, Y_train, a_0=a, b_0=b)
-    predictions_mean = model.predict(X_test)
-    predictions_mean_unscaled = (predictions_mean*Y_std) + Y_mean
-    error = predictions_mean_unscaled - Y_test.reshape(-1,1)
+    model.train(X_train, Y_train, a_0=a, b_0=b, error_bound=1e-4)
 
+    predictions_mean, predictions_std = model.predict(X_test)
+    predictions_mean_unscaled = (predictions_mean*Y_std) + Y_mean
+    predictions_std_unscaled = predictions_std*Y_std
+
+    error = predictions_mean_unscaled - Y_test.reshape(-1,1)
     RMSE.append(np.sqrt(np.sum(error**2)/N))
+
+    nll = 0.5 * np.log(2 * np.pi * predictions_std_unscaled**2) + 0.5 * (
+    error**2) / (predictions_mean_unscaled**2)
+    nlls.append(np.mean(nll))
+
     plt.scatter(X_test[:,0], Y_test, alpha=0.7)
     plt.scatter(X_test[:,0],predictions_mean_unscaled, alpha=0.7)
     plt.show()
-    print(RMSE[-1])
-print(np.mean(RMSE))
+    print(f"RMSE:{RMSE[-1]}, nll:{nlls[-1]}")
+
+print(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}")
+print(f"mean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
 

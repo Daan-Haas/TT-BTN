@@ -14,6 +14,7 @@ X = data[:,:-1]
 Y = data[:,-1]
 print(X.shape)
 RMSE = []
+nlls = []
 for i in range(10):
     np.random.seed(i)
     indices = np.random.permutation(len(X))
@@ -36,22 +37,32 @@ for i in range(10):
 
     R = [5 for _ in range(D -1)]
     R = [1]+R+[1]
-    M = [8 for _ in range(D)]
+    M = [20 for _ in range(D)]
 
-    a, b = 1e1,1e-5
+    a, b = 1e-2,1e-3
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
     model = TT_model.BTTKM(X_train.shape[1], R, M, pure_power_features_full)
-    model.train(X_train, Y_train, a_0=a, b_0=b, lambda_update=True)
-    predictions_mean = model.predict(X_test)
-    predictions_mean_unscaled = predictions_mean*Y_std + Y_mean
-    error = predictions_mean_unscaled - Y_test
-    # error = predictions_mean - Y_test
-    RMSE.append(np.sqrt(np.sum(error**2)/N))
-    plt.scatter(X_test[:,2], Y_test, alpha=0.7)
-    plt.scatter(X_test[:,2],predictions_mean_unscaled, alpha=0.7)
+
+    model.train(X_train, Y_train, a_0=a, b_0=b, plotting=False)
+    predictions_mean, predictions_std = model.predict(X_test)
+    predictions_mean_unscaled = (predictions_mean * Y_std) + Y_mean
+    predictions_std_unscaled = predictions_std * Y_std
+
+    error = predictions_mean_unscaled - Y_test.reshape(-1, 1)
+    RMSE.append(np.sqrt(np.sum(error ** 2) / N))
+
+    nll = 0.5 * np.log(2 * np.pi * predictions_std_unscaled ** 2) + 0.5 * (
+            error ** 2) / (predictions_mean_unscaled ** 2)
+    nlls.append(np.mean(nll))
+
+    plt.scatter(X_test[:, 0], Y_test, alpha=0.7)
+    plt.scatter(X_test[:, 0], predictions_mean_unscaled, alpha=0.7)
     plt.show()
-    print(RMSE[-1])
-print(np.mean(RMSE))
+    print(f"RMSE:{RMSE[-1]}, nll:{nlls[-1]}")
+
+print(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}")
+print(f"mean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
+
 

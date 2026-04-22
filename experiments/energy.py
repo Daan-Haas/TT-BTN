@@ -5,7 +5,7 @@ import pandas as pd
 from models import TT_model
 from kernels import pure_power_features_full
 
-with open("../data/energy.csv") as energy_data:
+with open("data/energy.csv") as energy_data:
     data = pd.read_csv(energy_data, header=None)
     data = data.values[1:,:]
     data = data.astype(float)
@@ -15,6 +15,7 @@ D = X.shape[1]
 N = X.shape[0]
 Y = data[:,-1]
 RMSE = []
+nlls = []
 for i in range(10):
     np.random.seed(i)
     indices = np.random.permutation(len(X))
@@ -42,19 +43,25 @@ for i in range(10):
 
     model = TT_model.BTTKM(X_train.shape[1], R, M, pure_power_features_full)
 
-    model.train(X_train, Y_train, a_0=a, b_0=b,
-                           c_0=c, d_0=d,
-                           g_0=g, h_0=h,plotting=False)
+    model.train(X_train, Y_train, a_0=a, b_0=b, plotting=False)
+    predictions_mean, predictions_std = model.predict(X_test)
+    predictions_mean_unscaled = (predictions_mean * Y_std) + Y_mean
+    predictions_std_unscaled = predictions_std * Y_std
 
-    predictions_mean = model.predict(X_test)
-    predictions_mean_unscaled = predictions_mean * Y_std + Y_mean
-    error = predictions_mean_unscaled - Y_test
+    error = predictions_mean_unscaled - Y_test.reshape(-1, 1)
+    RMSE.append(np.sqrt(np.sum(error ** 2) / N))
 
-    RMSE.append(np.sqrt(np.sum(np.square(error))/N))
+    nll = 0.5 * np.log(2 * np.pi * predictions_std_unscaled ** 2) + 0.5 * (
+            error ** 2) / (predictions_mean_unscaled ** 2)
+    nlls.append(np.mean(nll))
 
-    plt.scatter(X_test[:,2], Y_test)
-    plt.scatter(X_test[:,2],predictions_mean_unscaled)
+    plt.scatter(X_test[:, 0], Y_test, alpha=0.7)
+    plt.scatter(X_test[:, 0], predictions_mean_unscaled, alpha=0.7)
     plt.show()
+    print(f"RMSE:{RMSE[-1]}, nll:{nlls[-1]}")
 
-print(RMSE)
+print(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}")
+print(f"mean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
+
+
 
