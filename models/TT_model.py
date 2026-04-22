@@ -100,6 +100,7 @@ class BTTKM:
                 vectorized_W = self.expectation_tau*self.Sigma[d]@G_d.T@Y
                 self.W[d] = vectorized_W.reshape((self.R[d], self.M[d], self.R[d+1]), order='F')
 
+            W_norm = np.max(np.linalg.norm(self.W[d]))
             # # posterior update delta
             if delta_update:
                 for d in range(self.D):
@@ -254,7 +255,7 @@ class BTTKM:
                 self.expectation_tau = self.a_N / self.b_N
                 print("Convergence bound reached, exiting")
                 break
-            if W_norm[-1] < 1e-100 or np.isnan(W_norm[-1]):
+            if W_norm < 1e-100 or np.isnan(W_norm):
                 print("model collapsed")
                 break
 

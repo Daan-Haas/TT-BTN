@@ -43,7 +43,7 @@ for i in range(10):
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
     model = TT_model.BTTKM(D, R, M, pure_power_features_full)
-    model.train(X_train, Y_train, a_0=a, b_0=b, error_bound=1e-4)
+    model.train(X_train, Y_train, a_0=a, b_0=b, convergence_bound=1e-4)
 
     predictions_mean, predictions_std = model.predict(X_test)
     predictions_mean_unscaled = (predictions_mean*Y_std) + Y_mean
