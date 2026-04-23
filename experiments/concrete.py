@@ -64,4 +64,5 @@ for i in range(5,10):
 print(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}")
 print(f"mean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
 
-
+with open("concrete.txt", "w") as f:
+    f.write(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}\nmean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
