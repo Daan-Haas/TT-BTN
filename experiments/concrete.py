@@ -14,7 +14,7 @@ X = data[:,:-1]
 Y = data[:,-1]
 RMSE = []
 nlls = []
-for i in range(5,10):
+for i in range(10):
     np.random.seed(i)
     indices = np.random.permutation(len(X))
     split_index = int(0.90 * len(X))  # 90% for training, 10% for testing
