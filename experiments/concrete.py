@@ -56,9 +56,9 @@ for i in range(10):
             error ** 2) / (predictions_mean_unscaled ** 2)
     nlls.append(np.mean(nll))
 
-    plt.scatter(X_test[:, 0], Y_test, alpha=0.7)
-    plt.scatter(X_test[:, 0], predictions_mean_unscaled, alpha=0.7)
-    plt.show()
+    # plt.scatter(X_test[:, 0], Y_test, alpha=0.7)
+    # plt.scatter(X_test[:, 0], predictions_mean_unscaled, alpha=0.7)
+    # plt.show()
     print(f"RMSE:{RMSE[-1]}, nll:{nlls[-1]}")
 
 print(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}")

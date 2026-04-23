@@ -5,14 +5,13 @@ import numpy as np
 from models import TT_model
 from kernels import pure_power_features_full
 
-with open("data/airfoil.csv") as airfoil_data:
-    data = pd.read_csv(airfoil_data, header=None)
+with open("data/adult.csv") as adult_data:
+    data = pd.read_csv(adult_data, header=None)
     data = data.values[1:,:]
     data = data.astype(float)
 
 X = data[:,:-1]
 Y = data[:,-1]
-print(X.shape)
 RMSE = []
 nlls = []
 for i in range(10):
@@ -32,8 +31,8 @@ for i in range(10):
     Y_std = Y_train.std()
     Y_train = (Y_train - Y_mean) / Y_std
 
-    D = X_train.shape[0]
-    N = X_train.shape[1]
+    D = X_train.shape[1]
+    N = X_train.shape[0]
 
     R = [5 for _ in range(D -1)]
     R = [1]+R+[1]
@@ -44,8 +43,8 @@ for i in range(10):
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
     model = TT_model.BTTKM(X_train.shape[1], R, M, pure_power_features_full)
-
     model.train(X_train, Y_train, a_0=a, b_0=b, plotting=False)
+
     predictions_mean, predictions_std = model.predict(X_test)
     predictions_mean_unscaled = (predictions_mean * Y_std) + Y_mean
     predictions_std_unscaled = predictions_std * Y_std
@@ -56,7 +55,7 @@ for i in range(10):
     nll = 0.5 * np.log(2 * np.pi * predictions_std_unscaled ** 2) + 0.5 * (
             error ** 2) / (predictions_mean_unscaled ** 2)
     nlls.append(np.mean(nll))
-
+    #
     # plt.scatter(X_test[:, 0], Y_test, alpha=0.7)
     # plt.scatter(X_test[:, 0], predictions_mean_unscaled, alpha=0.7)
     # plt.show()
@@ -65,4 +64,5 @@ for i in range(10):
 print(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}")
 print(f"mean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
 
-
+with open("adult.txt", "w") as f:
+    f.write(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}\nmean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
