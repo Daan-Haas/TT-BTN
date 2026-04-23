@@ -5,8 +5,8 @@ import numpy as np
 from models import TT_model
 from kernels import pure_power_features_full
 
-with open("data/concrete.csv") as concrete_data:
-    data = pd.read_csv(concrete_data, header=None)
+with open("data/spambase.csv") as spambase_data:
+    data = pd.read_csv(spambase_data, header=None)
     data = data.values[1:,:]
     data = data.astype(float)
 
@@ -64,5 +64,5 @@ for i in range(10):
 print(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}")
 print(f"mean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
 
-with open("concrete.txt", "w") as f:
+with open("spambase.txt", "w") as f:
     f.write(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}\nmean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")

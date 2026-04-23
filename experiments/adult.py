@@ -5,8 +5,8 @@ import numpy as np
 from models import TT_model
 from kernels import pure_power_features_full
 
-with open("data/concrete.csv") as concrete_data:
-    data = pd.read_csv(concrete_data, header=None)
+with open("data/adult.csv") as adult_data:
+    data = pd.read_csv(adult_data, header=None)
     data = data.values[1:,:]
     data = data.astype(float)
 
@@ -55,7 +55,7 @@ for i in range(10):
     nll = 0.5 * np.log(2 * np.pi * predictions_std_unscaled ** 2) + 0.5 * (
             error ** 2) / (predictions_mean_unscaled ** 2)
     nlls.append(np.mean(nll))
-
+    #
     # plt.scatter(X_test[:, 0], Y_test, alpha=0.7)
     # plt.scatter(X_test[:, 0], predictions_mean_unscaled, alpha=0.7)
     # plt.show()
@@ -64,5 +64,5 @@ for i in range(10):
 print(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}")
 print(f"mean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
 
-with open("concrete.txt", "w") as f:
+with open("adult.txt", "w") as f:
     f.write(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}\nmean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
