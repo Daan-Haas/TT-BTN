@@ -12,7 +12,6 @@ with open("data/airfoil.csv") as airfoil_data:
 
 X = data[:,:-1]
 Y = data[:,-1]
-print(X.shape)
 RMSE = []
 nlls = []
 for i in range(10):
@@ -32,8 +31,8 @@ for i in range(10):
     Y_std = Y_train.std()
     Y_train = (Y_train - Y_mean) / Y_std
 
-    D = X_train.shape[0]
-    N = X_train.shape[1]
+    D = X_train.shape[1]
+    N = X_train.shape[0]
 
     R = [5 for _ in range(D -1)]
     R = [1]+R+[1]
@@ -43,9 +42,9 @@ for i in range(10):
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
-    model = TT_model.BTTKM(D, R, M, pure_power_features_full)
-
+    model = TT_model.BTTKM(X_train.shape[1], R, M, pure_power_features_full)
     model.train(X_train, Y_train, a_0=a, b_0=b, plotting=False)
+
     predictions_mean, predictions_std = model.predict(X_test)
     predictions_mean_unscaled = (predictions_mean * Y_std) + Y_mean
     predictions_std_unscaled = predictions_std * Y_std
@@ -64,7 +63,6 @@ for i in range(10):
 
 print(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}")
 print(f"mean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
-
 
 with open("airfoil.txt", "w") as f:
     f.write(f"mean RMSE:{np.mean(RMSE)} with standard deviation:{np.std(RMSE)}\nmean nll:{np.mean(nlls)} with standard deviation:{np.std(nlls)}")
