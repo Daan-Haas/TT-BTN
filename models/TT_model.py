@@ -22,6 +22,8 @@ class BTTKM:
         self.Sigma = [0.1*np.eye(size[d]) for d in range(self.D)]
         self.covar = [np.ones(size[d]) for d in range(self.D)]
         self.kernel = kernel
+        self.a_N = 1e-2
+        self.b_N = 1e-2
 
     def init_cores(self):
         core_list = [np.random.standard_normal([self.R[i],self.M[i],self.R[i+1]]) for i in range(self.D)]
@@ -45,6 +47,9 @@ class BTTKM:
         self.b_N = b_0
         self.expectation_tau = a_0 / b_0
         rank_tol = 1e-4
+
+        self.a_N = a_0
+        self.b_N = b_0
 
         if c_0 is None:
             c_0 = [1e-6 * np.ones(self.R[d]) for d in range(self.D+1)]
@@ -250,7 +255,7 @@ class BTTKM:
                 self.a_N = a_0 + self.N / 2
                 Expectation_G = self.forward_accumulator_G(self.D)
                 Expectation_H = np.ones(self.N).T @ self.forward_accumulator_H(self.D)
-                frob_errors = np.linalg.norm(Y) ** 2 - 2 * (Y @ Expectation_G).squeeze() + Expectation_H.squeeze()
+                frob_errors = np.linalg.norm(Y) ** 2 - 2 * (Y.T @ Expectation_G).squeeze() + Expectation_H.squeeze()
                 self.b_N = b_0 + 0.5 * frob_errors
                 self.expectation_tau = self.a_N / self.b_N
                 print("Convergence bound reached, exiting")
@@ -264,7 +269,7 @@ class BTTKM:
             self.a_N = a_0 + self.N / 2
             Expectation_G = self.forward_accumulator_G(self.D)
             Expectation_H = np.ones(self.N).T @ self.forward_accumulator_H(self.D)
-            frob_errors = np.linalg.norm(Y) ** 2 - 2 * (Y @ Expectation_G).squeeze() + Expectation_H.squeeze()
+            frob_errors = np.linalg.norm(Y) ** 2 - 2 * (Y.T @ Expectation_G).squeeze() + Expectation_H.squeeze()
             self.b_N = b_0 + 0.5 * frob_errors
             self.expectation_tau = self.a_N / self.b_N
             print("Iteration limit reached, exiting")

@@ -27,10 +27,6 @@ for i in range(10):
     X_train = (X_train - X_mean) / X_std
     X_test = (X_test - X_mean) / X_std  # Use train stats
 
-    Y_mean = Y_train.mean()
-    Y_std = Y_train.std()
-    Y_train = (Y_train - Y_mean) / Y_std
-
     D = X_train.shape[1]
     N = X_train.shape[0]
 
@@ -46,14 +42,12 @@ for i in range(10):
     model.train(X_train, Y_train, a_0=a, b_0=b, plotting=False)
 
     predictions_mean, predictions_std = model.predict(X_test)
-    predictions_mean_unscaled = (predictions_mean * Y_std) + Y_mean
-    predictions_std_unscaled = predictions_std * Y_std
 
-    error = predictions_mean_unscaled - Y_test.reshape(-1, 1)
+    error = predictions_mean - Y_test.reshape(-1, 1)
     RMSE.append(np.sqrt(np.sum(error ** 2) / N))
 
-    nll = 0.5 * np.log(2 * np.pi * predictions_std_unscaled ** 2) + 0.5 * (
-            error ** 2) / (predictions_mean_unscaled ** 2)
+    nll = 0.5 * np.log(2 * np.pi * predictions_std ** 2) + 0.5 * (
+            error ** 2) / (predictions_mean ** 2)
     nlls.append(np.mean(nll))
     #
     # plt.scatter(X_test[:, 0], Y_test, alpha=0.7)

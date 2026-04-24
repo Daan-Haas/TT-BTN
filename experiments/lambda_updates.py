@@ -60,8 +60,8 @@ plt.set_cmap("binary")
 for d in range(D):
     relevance_grid = [np.outer(model.delta[d], model.lambda_R[d]) for d in range(D)]
     axs[d].matshow(relevance_grid[d])
-    ylabels = [f'{model.delta[d][m]:.1g}' for m in range(model.M[d])]
-    xlabels = [f'{model.lambda_R[d][r]:.1g}' for r in range(model.R[d])]
+    ylabels = [f'{model.delta[d][m]:.2g}' for m in range(model.M[d])]
+    xlabels = [f'{model.lambda_R[d][r]:.2g}' for r in range(model.R[d])]
     axs[d].set_yticks(range(len(model.delta[d])), labels=[])
     axs[d].set_xticks(range(len(model.lambda_R[d])), labels=xlabels, rotation=90)
 

@@ -56,8 +56,7 @@ for D in Ds:
         TT_model.train(X, Y,
                        a_0=a, b_0=b,
                        iteration_limit=10,
-                       error_bound=1e-2,
-                       printing=False,
+                       convergence_bound=1e-2,
                        plotting=False)
 
         tries += 1
