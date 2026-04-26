@@ -1,3 +1,5 @@
+from matplotlib.pyplot import tight_layout
+
 from models.TT_model import *
 from toy_data import *
 
@@ -14,10 +16,21 @@ ranks = [5 for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
 dims = [I for _ in range(D)] # dimensionality of kernels
 
+c_0 = [1e-6 * np.ones(ranks[d]) for d in range(D+1)]
+d_0 = [1e-6 * np.ones(ranks[d]) for d in range(D+1)]
+g_0 = [1e-6 * np.ones(dims[d]) for d in range(D)]
+h_0 = [1e-6 * np.ones(dims[d]) for d in range(D)]
+
 X_train, Y_train, X_test, Y_test, gt = generate_pure_power_dataset(D, 3, 3, 5, N, 0)
 
 model = BTTKM(D, ranks, [I for _ in range(D)], pure_power_features_full)
-model.train(X_train, Y_train, a_0=1e-1, b_0=1e-3, iteration_limit=20, delta_update=True, lambda_update=True)
+model.train(X_train, Y_train,
+            a_0=1e-1, b_0=1e-3,
+            c_0=c_0, d_0=d_0,
+            g_0=g_0, h_0=h_0,
+            iteration_limit=10,
+            delta_update=True,
+            lambda_update=True)
 
 results, _ = model.predict(X_test)
 train_results, _ = model.predict(X_train)
@@ -53,21 +66,27 @@ plt.title(f"predictions on Validation set, ELBO: {ELBO:.2e}")
 plt.legend()
 plt.show()
 
-widths = [1, 5, 5]
-heights = [5, 5, 5]
-fig, axs = plt.subplots(1, D, constrained_layout=True)
-fig.add_gridspec(ncols=3, nrows=1, width_ratios=widths,
-                          height_ratios=[5])
+fig = plt.figure(figsize=(12, 4), tight_layout=True, dpi=100)
+gs = fig.add_gridspec(1, 3, width_ratios=[5, 5, 5])
 plt.set_cmap("binary")
-for d in range(D):
-    relevance_grid = [np.outer(model.delta[d], model.lambda_R[d]) for d in range(D)]
-    axs[d].imshow(relevance_grid[d])
+axs = [fig.add_subplot(gs[0, 0]),
+    fig.add_subplot(gs[0, 1]),
+    fig.add_subplot(gs[0, 2])]
+
+relevance_grid = [np.outer(model.delta[d], model.lambda_R[d]) for d in range(D)]
+
+for d, ax in enumerate(axs):
+    ax.imshow(relevance_grid[d], aspect='equal')
     ylabels = [f'{model.delta[d][m]:.2g}' for m in range(model.M[d])]
     xlabels = [f'{model.lambda_R[d][r]:.2g}' for r in range(model.R[d])]
-    axs[d].set_yticks(range(len(model.delta[d])), labels=ylabels)
-    axs[d].set_xticks(range(len(model.lambda_R[d])), labels=xlabels, rotation=90)
-    axs[d].set_title(f"Core {d}")
-    axs[d].set_xlabel(r"Relevance $\boldsymbol{\lambda}_d$")
-    axs[d].set_ylabel(r"Relevance $\boldsymbol{\delta}_d$")
-axs[0].set_ylabel(r"Relevance $\boldsymbol{\delta}_d$")
+    ax.set_yticks(range(len(model.delta[d])), labels=ylabels)
+    ax.set_xticks(range(len(model.lambda_R[d])), labels=xlabels, rotation=90)
+    ax.set_title(f"Core {d+1}")
+axs[0].set_ylabel(r"Relevance $\boldsymbol{\delta}_1$")
+axs[1].set_xlabel(r"Lambda $\boldsymbol{\lambda}_2$")
+axs[1].set_ylabel(r"Lambda $\boldsymbol{\delta}_2$")
+axs[2].set_xlabel(r"Lambda $\boldsymbol{\lambda}_3$")
+axs[2].set_ylabel(r"Lambda $\boldsymbol{\lambda}_3$")
+
+plt.tight_layout()
 plt.show()

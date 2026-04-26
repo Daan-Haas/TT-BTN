@@ -62,11 +62,11 @@ class BTTKM:
         self.lambda_R = [c_0[d]/d_0[d] for d in range(self.D+1)]
 
         if g_0 is None:
-            g_0 = [1 * np.ones(self.M[d]) for d in range(self.D)]
+            g_0 = [1e-6 * np.ones(self.M[d]) for d in range(self.D)]
         self.g_N = g_0.copy()
 
         if h_0 is None:
-            h_0 = [1 * np.ones(self.M[d]) for d in range(self.D)]
+            h_0 = [1e-6 * np.ones(self.M[d]) for d in range(self.D)]
         self.h_N = h_0.copy()
 
         self.delta = [g_0[d]/h_0[d] for d in range(self.D)]
