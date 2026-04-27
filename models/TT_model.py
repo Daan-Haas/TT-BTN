@@ -283,7 +283,7 @@ class BTTKM:
             fig.legend()
             plt.show()
 
-    def predict(self, X):
+    def predict(self, X, classification=False):
         self.feature_map = self.kernel(X, max(self.M))
         self.N = self.feature_map.shape[1]
         predicted_mean = self.forward_accumulator_G(self.D)

@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+from scipy.stats import norm
+from sklearn.metrics import accuracy_score
 
 from models import TT_model
 from kernels import pure_power_features_full
@@ -12,6 +14,8 @@ with open("data/spambase.csv") as spambase_data:
 
 X = data[:,:-1]
 Y = data[:,-1]
+Y = np.where(Y > 0, 1, -1)
+
 RMSE = []
 nlls = []
 for i in range(10):
@@ -34,7 +38,7 @@ for i in range(10):
     R = [1]+R+[1]
     M = [20 for _ in range(D)]
 
-    a, b = 1e-2,1e-3
+    a, b = 1e-1,1e-3
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
@@ -43,12 +47,18 @@ for i in range(10):
 
     predictions_mean, predictions_std = model.predict(X_test)
 
-    error = predictions_mean - Y_test.reshape(-1, 1)
-    RMSE.append(np.sqrt(np.sum(error ** 2) / N))
+    accuracy = 1 - accuracy_score(Y_test, np.sign(predictions_mean))
+    RMSE.append(accuracy)
 
-    nll = 0.5 * np.log(2 * np.pi * predictions_std ** 2) + 0.5 * (
-            error ** 2) / (predictions_mean ** 2)
-    nlls.append(np.mean(nll))
+    probs_gt_zero = norm.sf(0, loc=predictions_mean, scale=predictions_std)  # P(y > 0)
+    y_test_binary = (Y_test + 1) // 2
+    eps = 1e-15
+    y_pred_prob = np.clip(probs_gt_zero, eps, 1 - eps)
+    nll = -np.mean(
+        y_test_binary * np.log(y_pred_prob)
+        + (1 - y_test_binary) * np.log(1 - y_pred_prob)
+    )
+    nlls.append(nll)
 
     # plt.scatter(X_test[:, 0], Y_test, alpha=0.7)
     # plt.scatter(X_test[:, 0], predictions_mean_unscaled, alpha=0.7)

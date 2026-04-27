@@ -16,7 +16,7 @@ ranks = [3 for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
 dims = [I for _ in range(D)] # dimensionality of kernels
 
-X_train, Y_train, X_test, Y_test, ground_truth = generate_pure_power_dataset(3, 3, 5, N, noise_var)
+X_train, Y_train, X_test, Y_test, ground_truth = generate_pure_power_dataset(3, 3, 3, 5, N, noise_var)
 ranks = [5 for _ in range(D-1)] # Tensor-train ranks
 ranks = [1] + ranks + [1] # first and last rank must be 1 to maintain output dimension
 model = BTTKM(D, ranks, [I for _ in range(D)], pure_power_features_full)

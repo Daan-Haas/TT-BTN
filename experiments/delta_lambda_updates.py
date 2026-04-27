@@ -1,3 +1,4 @@
+from matplotlib.colors import LogNorm
 from matplotlib.pyplot import tight_layout
 
 from models.TT_model import *
@@ -8,7 +9,7 @@ np.random.seed(seed)
 ### Data settings ###
 I = 5 #
 N = 100 # Number of data points
-noise_var = 0.0001 # Noise variance
+noise_var = 0.001 # Noise variance
 
 ### Model settings ###
 D = 3 # Number of cores
@@ -21,7 +22,7 @@ d_0 = [1e-6 * np.ones(ranks[d]) for d in range(D+1)]
 g_0 = [1e-6 * np.ones(dims[d]) for d in range(D)]
 h_0 = [1e-6 * np.ones(dims[d]) for d in range(D)]
 
-X_train, Y_train, X_test, Y_test, gt = generate_pure_power_dataset(D, 3, 3, 5, N, 0)
+X_train, Y_train, X_test, Y_test, gt = generate_pure_power_dataset(D, 3, 3, 5, N, noise_var)
 
 model = BTTKM(D, ranks, [I for _ in range(D)], pure_power_features_full)
 model.train(X_train, Y_train,
@@ -76,17 +77,17 @@ axs = [fig.add_subplot(gs[0, 0]),
 relevance_grid = [np.outer(model.delta[d], model.lambda_R[d]) for d in range(D)]
 
 for d, ax in enumerate(axs):
-    ax.imshow(relevance_grid[d], aspect='equal')
+    ax.imshow(relevance_grid[d], aspect='equal', norm=LogNorm())
     ylabels = [f'{model.delta[d][m]:.2g}' for m in range(model.M[d])]
     xlabels = [f'{model.lambda_R[d][r]:.2g}' for r in range(model.R[d])]
     ax.set_yticks(range(len(model.delta[d])), labels=ylabels)
     ax.set_xticks(range(len(model.lambda_R[d])), labels=xlabels, rotation=90)
     ax.set_title(f"Core {d+1}")
 axs[0].set_ylabel(r"Relevance $\boldsymbol{\delta}_1$")
-axs[1].set_xlabel(r"Lambda $\boldsymbol{\lambda}_2$")
-axs[1].set_ylabel(r"Lambda $\boldsymbol{\delta}_2$")
-axs[2].set_xlabel(r"Lambda $\boldsymbol{\lambda}_3$")
-axs[2].set_ylabel(r"Lambda $\boldsymbol{\lambda}_3$")
+axs[1].set_xlabel(r"Relevance $\boldsymbol{\lambda}_2$")
+axs[1].set_ylabel(r"Relevance $\boldsymbol{\delta}_2$")
+axs[2].set_xlabel(r"Relevance $\boldsymbol{\lambda}_3$")
+axs[2].set_ylabel(r"Relevance $\boldsymbol{\delta}_3$")
 
 plt.tight_layout()
 plt.show()
