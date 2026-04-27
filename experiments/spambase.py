@@ -38,7 +38,7 @@ for i in range(10):
     R = [1]+R+[1]
     M = [20 for _ in range(D)]
 
-    a, b = 1e-2,1e-3
+    a, b = 1e1,1e-3
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 

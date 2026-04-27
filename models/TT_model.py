@@ -20,7 +20,7 @@ class BTTKM:
         self.init_cores()
         size = [self.R[d]*self.M[d]*self.R[d+1] for d in range(self.D)]
         self.Sigma = [0.1*np.eye(size[d]) for d in range(self.D)]
-        self.covar = [np.ones(size[d]) for d in range(self.D)]
+        self.var = [np.ones(size[d]) for d in range(self.D)]
         self.kernel = kernel
         self.a_N = 1e-2
         self.b_N = 1e-2
@@ -100,7 +100,7 @@ class BTTKM:
 
                 variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
                 self.Sigma[d] = np.linalg.inv(np.add(self.expectation_tau*H_d, variance_term))
-                self.covar[d] = np.diag(self.Sigma[d])
+                self.var[d] = np.diag(self.Sigma[d])
 
                 vectorized_W = self.expectation_tau*self.Sigma[d]@G_d.T@Y
                 self.W[d] = vectorized_W.reshape((self.R[d], self.M[d], self.R[d+1]), order='F')
@@ -114,7 +114,7 @@ class BTTKM:
 
                     tensor_shape = (self.R[d], self.M[d], self.R[d + 1])
 
-                    variance_tensor_d = self.covar[d].reshape(tensor_shape, order='F', copy=False)
+                    variance_tensor_d = self.var[d].reshape(tensor_shape, order='F', copy=False)
                     variance_matrix_d = np.vstack([variance_tensor_d[:, i, :].reshape(1, -1).flatten() for i in
                                                    range(variance_tensor_d.shape[1])])
 
@@ -143,14 +143,14 @@ class BTTKM:
 
                     expectation1_term1 = np.diag(W_3@np.kron(Delta_d_1, Lambda_d_min_1)@W_3.T)
 
-                    V_d = self.covar[d-1].reshape(self.R[d-1], self.M[d-1], self.R[d], order='F', copy=False)
+                    V_d = self.var[d-1].reshape(self.R[d-1], self.M[d-1], self.R[d], order='F', copy=False)
                     V_d_3 = np.vstack([V_d[:,:,i].T.reshape(1,-1).flatten() for i in range(V_d.shape[2])])
 
                     expectation1_term2 = V_d_3@np.kron(self.delta[d-1], self.lambda_R[d-1])
                     expectation1 = expectation1_term1 + expectation1_term2
                     expectation2_term1 = np.diag(W_1@np.kron(Lambda_d_plus_1, Delta_d)@W_1.T)
 
-                    V_d = self.covar[d].reshape(self.R[d], self.M[d], self.R[d+1], order='F', copy=False)
+                    V_d = self.var[d].reshape(self.R[d], self.M[d], self.R[d+1], order='F', copy=False)
                     V_d_1 = np.vstack([V_d[i,:,:].T.reshape(1,-1).flatten() for i in range(V_d.shape[0])])
 
                     expectation2_term2 = V_d_1@np.kron(self.lambda_R[d+1], self.delta[d])
@@ -185,16 +185,16 @@ class BTTKM:
                             Sigma_d_min_tensor = self.Sigma[d-1].reshape(self.R[d-1], self.M[d-1], self.R[d], self.R[d-1], self.M[d-1], self.R[d], order='F', copy=False)
                             Sigma_d_min_tensor = np.delete(Sigma_d_min_tensor, ~pruning_mask, axis=2)
                             Sigma_d_min_tensor = np.delete(Sigma_d_min_tensor, ~pruning_mask, axis=5)
-                            covar_d_tensor = self.covar[d].reshape([self.R[d], self.M[d], self.R[d+1]], order='F', copy=False)
+                            covar_d_tensor = self.var[d].reshape([self.R[d], self.M[d], self.R[d+1]], order='F', copy=False)
                             covar_d_tensor = np.delete(covar_d_tensor, ~pruning_mask, axis=0)
-                            covar_d_min_tensor = self.covar[d-1].reshape([self.R[d-1], self.M[d], self.R[d]], order='F', copy=False)
+                            covar_d_min_tensor = self.var[d-1].reshape([self.R[d-1], self.M[d], self.R[d]], order='F', copy=False)
                             covar_d_min_tensor = np.delete(covar_d_min_tensor, ~pruning_mask, axis=2)
                             self.R[d] = sum(pruning_mask)
                             self.lambda_R[d] = self.lambda_R[d][pruning_mask]
                             self.Sigma[d] = Sigma_d_tensor.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F')
                             self.Sigma[d-1] = Sigma_d_min_tensor.reshape([self.R[d-1]*self.M[d-1]*self.R[d], self.R[d-1]*self.M[d-1]*self.R[d]], order='F')
-                            self.covar[d] = covar_d_tensor.reshape(-1)
-                            self.covar[d-1] = covar_d_min_tensor.reshape(-1)
+                            self.var[d] = covar_d_tensor.reshape(-1)
+                            self.var[d-1] = covar_d_min_tensor.reshape(-1)
                             c_0[d] = c_0[d][pruning_mask]
                             d_0[d] = d_0[d][pruning_mask]
                             self.c_N[d] = self.c_N[d][pruning_mask]
@@ -220,7 +220,7 @@ class BTTKM:
                 variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
 
                 L2_norms += np.trace(variance_term @ (np.outer(self.W[d].reshape((-1,1)), self.W[d].reshape((-1,1)))
-                                                      + np.diag(self.covar[d])))
+                                                      + np.diag(self.var[d])))
                 ln_q_W += 0.5*np.log(np.linalg.norm(self.Sigma[d])) + (self.R[d]*self.M[d]/2)*(1+np.log(2*np.pi))
                 for r in range(self.R[d]):
                     lambda_term += ((1-np.log(self.d_N[d][r])
