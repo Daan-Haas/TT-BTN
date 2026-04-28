@@ -313,6 +313,7 @@ class BTTKM:
 
     def forward_accumulator_H(self, d):
         H_k = np.ones((self.N, 1))
+        singular_values = [1]
         for k in range(d):
             Wk = unfold(self.W[k], 3).T
             mean_WW = np.kron(Wk, Wk)
@@ -327,8 +328,24 @@ class BTTKM:
 
             expectation_WW = np.add(mean_WW, covariance_WW)
 
+            max_s = float(max(np.linalg.svd(expectation_WW, full_matrices=False, compute_uv=False)))
+
+            singular_values.append(max_s)
+            expectation_WW = expectation_WW / max_s
+
             H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW
-        return H_k
+        singular_values.sort()
+        if len(singular_values) < 4:
+            scale_factor = np.prod(singular_values)
+        else:
+            scale_factor = singular_values.pop(0) * singular_values.pop(-1)
+            while singular_values:
+                if scale_factor > 1:
+                    scale_factor = scale_factor * singular_values.pop(0)
+                else:
+                    scale_factor = scale_factor * singular_values.pop(-1)
+
+        return H_k * scale_factor
 
     def backward_accumulator_H(self, d):
         H_k = np.ones((self.N, 1))
