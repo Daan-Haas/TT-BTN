@@ -40,10 +40,11 @@ for i in range(10):
 
     a, b = 1e-2,1e-3
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
-    g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
+    g, h = [1 * np.ones(M[d]) for d in range(D)], [1 * np.ones(M[d]) for d in range(D)]
 
     model = TT_model.BTTKM(X_train.shape[1], R, M, pure_power_features_full)
-    model.train(X_train, Y_train, a_0=a, b_0=b, plotting=False)
+    model.train(X_train, Y_train, a_0=a, b_0=b,
+                g_0=g, h_0=h, plotting=False)
 
     predictions_mean, predictions_std = model.predict(X_test)
 
