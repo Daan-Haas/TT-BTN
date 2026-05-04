@@ -72,16 +72,20 @@ for i in range(10):
 
     TT_ranks.append(BTTKM.R)
 
-    TT_predictions_mean, TT_predictions_std = BTTKM.predict(X_test)
-    TT_predictions_mean_unscaled = (TT_predictions_mean * Y_std) + Y_mean
-    TT_predictions_std_unscaled = TT_predictions_std * Y_std
+    predictions_mean, predictions_std = BTTKM.predict(X_test)
 
-    TT_error = TT_predictions_mean_unscaled - Y_test.reshape(-1, 1)
-    TT_RMSE.append(np.sqrt(np.sum(TT_error ** 2) / N))
+    accuracy = 1 - accuracy_score(Y_test, np.sign(predictions_mean))
+    TT_RMSE.append(accuracy)
 
-    TT_nll = (0.5 * np.log(2 * np.pi * TT_predictions_std_unscaled ** 2)
-              + 0.5 * (TT_error ** 2) / (TT_predictions_mean_unscaled ** 2))
-    TT_nlls.append(np.mean(TT_nll))
+    probs_gt_zero = norm.sf(0, loc=predictions_mean, scale=predictions_std)  # P(y > 0)
+    y_test_binary = (Y_test + 1) // 2
+    eps = 1e-15
+    y_pred_prob = np.clip(probs_gt_zero, eps, 1 - eps)
+    nll = -np.mean(
+        y_test_binary * np.log(y_pred_prob)
+        + (1 - y_test_binary) * np.log(1 - y_pred_prob)
+    )
+    TT_nlls.append(nll)
 
     max_rank_CPD = 25
     c_CPD, d_CPD = 1e-5 * np.ones(max_rank_CPD), 1e-6 * np.ones(max_rank_CPD)
@@ -109,24 +113,26 @@ for i in range(10):
     CPD_end_time = time.time()
     CPD_times.append(CPD_end_time - CPD_start_time)
     # Predict (mse is returned by the predict function)
-    CPD_prediction_mean, CPD_prediction_std, _ = BTNKM.predict(
-        features=X_test, input_dimension=20
+    # Predict (mse is returned by the predict function)
+    prediction_mean, prediction_std, mse = BTNKM.predict(
+        features=X_test,
+        input_dimension=20,
+        true_values=Y_test,
+        classification=True,
     )
 
-    CPD_prediction_mean_unscaled = CPD_prediction_mean * Y_std + Y_mean
-    CPD_prediction_std_unscaled = CPD_prediction_std * Y_std
+    CPD_RMSE.append(mse)
 
-    # nll
-    nll = 0.5 * np.log(2 * np.pi * CPD_prediction_std_unscaled ** 2) + 0.5 * (
-            (Y_test - CPD_prediction_mean_unscaled) ** 2
-    ) / (CPD_prediction_std_unscaled ** 2)
-    CPD_nlls.append(np.mean(nll))
-
-    # rmse
-    rmse = np.sqrt(np.mean((CPD_prediction_mean_unscaled - Y_test) ** 2))
-    CPD_RMSE.append(rmse)
-
-    CPD_ranks.append(R)
+    # NLL
+    probs_gt_zero = norm.sf(0, loc=prediction_mean, scale=prediction_std)  # P(y > 0)
+    y_test_binary = (Y_test + 1) // 2
+    eps = 1e-15
+    y_pred_prob = np.clip(probs_gt_zero, eps, 1 - eps)
+    nll = -np.mean(
+        y_test_binary * np.log(y_pred_prob)
+        + (1 - y_test_binary) * np.log(1 - y_pred_prob)
+    )
+    CPD_nll_values.append(nll)
 
     # plt.scatter(X_test[:,0], Y_test, alpha=0.7)
     # plt.scatter(X_test[:,0], TT_predictions_mean_unscaled, alpha=0.7)
