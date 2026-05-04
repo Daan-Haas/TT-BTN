@@ -100,7 +100,7 @@ for i in range(10):
         features=X_train,
         target=Y_train,
         input_dimension=feature_dimension,
-        max_rank=max_rank_CPD,
+        max_rank=CPD_max_rank,
         shape_parameter_tau=a,
         scale_parameter_tau=b,
         shape_parameter_lambda=c,
