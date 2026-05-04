@@ -91,7 +91,7 @@ for i in range(10):
     c, d = 1e-5 * np.ones(max_rank_CPD), 1e-6 * np.ones(max_rank_CPD)
     g, h = 1e-6 * np.ones(feature_dimension), 1e-6 * np.ones(feature_dimension)
 
-    BTNKM = CPD_model.btnkm(D, 20, 25)
+    BTNKM = CPD_model.btnkm(D, feature_dimension, max_rank_CPD)
     CPD_start_time = time.time()
     R, _, _, _, _, _, _ = BTNKM.train(
         features=X_train,

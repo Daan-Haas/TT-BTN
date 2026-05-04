@@ -295,6 +295,7 @@ class btnkm:
                     print("Rank becomes 0 !!!")
                     break
                 if R != np.max(rankest):
+                    print("pruning")
                     indices = var_explained > rank_tol
                     false_indices = np.where(~indices)[0]
                     lambda_R = np.delete(lambda_R, false_indices)
