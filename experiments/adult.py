@@ -18,6 +18,10 @@ X = data[:,:-1]
 Y = data[:,-1]
 Y = np.where(Y > 0, 1, -1)
 
+feature_dimension = 20
+max_rank_TT = 3
+max_rank_CPD = 25
+
 TT_RMSE = []
 TT_nlls = []
 BTTKM_time = []
@@ -47,9 +51,9 @@ for i in range(10):
     D = X_train.shape[1]
     N = X_train.shape[0]
 
-    R = [5 for _ in range(D -1)]
+    R = [max_rank_TT for _ in range(D -1)]
     R = [1]+R+[1]
-    M = [20 for _ in range(D)]
+    M = [feature_dimension for _ in range(D)]
 
     a, b = 1e-2,1e-3
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
@@ -86,15 +90,15 @@ for i in range(10):
     )
     TT_nlls.append(nll)
 
-    max_rank_CPD = 25
-    c_CPD, d_CPD = 1e-5 * np.ones(max_rank_CPD), 1e-6 * np.ones(max_rank_CPD)
-    g_CPD, h_CPD = 1e-6 * np.ones(20), 1e-6 * np.ones(20)
+    a, b = 1e-2, 1e-3
+    c, d = 1e-6 * np.ones(max_rank_CPD), 1e-6 * np.ones(max_rank_CPD)
+    g, h = 1e-6 * np.ones(feature_dimension), 1e-6 * np.ones(feature_dimension)
     BTNKM = CPD_model.btnkm(D, 20, 25)
     CPD_start_time = time.time()
     R, _, _, _, _, _, _ = BTNKM.train(
         features=X_train,
         target=Y_train,
-        input_dimension=20,
+        input_dimension=feature_dimension,
         max_rank=max_rank_CPD,
         shape_parameter_tau=a,
         scale_parameter_tau=b,
@@ -115,7 +119,7 @@ for i in range(10):
     # Predict (mse is returned by the predict function)
     prediction_mean, prediction_std, mse = BTNKM.predict(
         features=X_test,
-        input_dimension=20,
+        input_dimension=feature_dimension,
         true_values=Y_test,
         classification=True,
     )

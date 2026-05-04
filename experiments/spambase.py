@@ -18,6 +18,9 @@ X = data[:,:-1]
 Y = data[:,-1]
 Y = np.where(Y > 0, 1, -1)
 
+feature_dimension = 20
+CPD_max_rank = 25
+TT_max_rank = 5
 
 TT_RMSE = []
 TT_nlls = []
@@ -48,9 +51,9 @@ for i in range(10):
     D = X_train.shape[1]
     N = X_train.shape[0]
 
-    R = [5 for _ in range(D -1)]
+    R = [TT_max_rank for _ in range(D -1)]
     R = [1]+R+[1]
-    M = [20 for _ in range(D)]
+    M = [feature_dimension for _ in range(D)]
 
     a, b = 1e-1,1e-3
     c, d = [1e-5 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
@@ -87,22 +90,23 @@ for i in range(10):
     )
     TT_nlls.append(nll)
 
-    max_rank_CPD = 25
-    c_CPD, d_CPD = 1e-5 * np.ones(max_rank_CPD), 1e-6 * np.ones(max_rank_CPD)
-    g_CPD, h_CPD = 1e-6 * np.ones(20), 1e-6 * np.ones(20)
+
+    a, b = 1e-2, 1e-3
+    c, d = 1e-5 * np.ones(CPD_max_rank), 1e-6 * np.ones(CPD_max_rank)
+    g, h = 1e-6 * np.ones(feature_dimension), 1e-6 * np.ones(feature_dimension)
     BTNKM = CPD_model.btnkm(D, 20, 25)
     CPD_start_time = time.time()
     R, _, _, _, _, _, _ = BTNKM.train(
         features=X_train,
         target=Y_train,
-        input_dimension=20,
+        input_dimension=feature_dimension,
         max_rank=max_rank_CPD,
         shape_parameter_tau=a,
         scale_parameter_tau=b,
-        shape_parameter_lambda=c_CPD,
-        scale_parameter_lambda=d_CPD,
-        shape_parameter_delta=g_CPD,
-        scale_parameter_delta=h_CPD,
+        shape_parameter_lambda=c,
+        scale_parameter_lambda=d,
+        shape_parameter_delta=g,
+        scale_parameter_delta=h,
         max_iter=50,
         precision_update=True,
         lambda_update=True,

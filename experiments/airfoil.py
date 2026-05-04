@@ -15,6 +15,10 @@ with open("data/airfoil.csv") as airfoil_data:
 X = data[:,:-1]
 Y = data[:,-1]
 
+feature_dimension = 20
+max_rank_CPD = 25
+max_rank_TT = 5
+
 TT_RMSE = []
 TT_nlls = []
 BTTKM_time = []
@@ -48,9 +52,9 @@ for i in range(10):
     D = X_train.shape[1]
     N = X_train.shape[0]
 
-    R = [5 for _ in range(D -1)]
+    R = [max_rank_TT for _ in range(D -1)]
     R = [1]+R+[1]
-    M = [20 for _ in range(D)]
+    M = [feature_dimension for _ in range(D)]
 
     a, b = 1e-2,1e-3
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
@@ -83,22 +87,23 @@ for i in range(10):
               + 0.5 * (TT_error ** 2) / (TT_predictions_mean_unscaled ** 2))
     TT_nlls.append(np.mean(TT_nll))
 
-    max_rank_CPD = 25
-    c_CPD, d_CPD = 1e-5 * np.ones(max_rank_CPD), 1e-6 * np.ones(max_rank_CPD)
-    g_CPD, h_CPD = 1e-6 * np.ones(20), 1e-6 * np.ones(20)
-    BTNKM = CPD_model.btnkm(D, 20, 25)
+    a, b = 1e-3, 1e-3
+    c, d = 1e-5 * np.ones(max_rank_CPD), 1e-6 * np.ones(max_rank_CPD)
+    g, h = 1e-6 * np.ones(feature_dimension), 1e-6 * np.ones(feature_dimension)
+
+    BTNKM = CPD_model.btnkm(D, feature_dimension, max_rank_CPD)
     CPD_start_time = time.time()
     R, _, _, _, _, _, _ = BTNKM.train(
         features=X_train,
         target=Y_train,
-        input_dimension=20,
+        input_dimension=feature_dimension,
         max_rank=max_rank_CPD,
         shape_parameter_tau=a,
         scale_parameter_tau=b,
-        shape_parameter_lambda=c_CPD,
-        scale_parameter_lambda=d_CPD,
-        shape_parameter_delta=g_CPD,
-        scale_parameter_delta=h_CPD,
+        shape_parameter_lambda=c,
+        scale_parameter_lambda=d,
+        shape_parameter_delta=g,
+        scale_parameter_delta=h,
         max_iter=50,
         precision_update=True,
         lambda_update=True,
@@ -110,7 +115,7 @@ for i in range(10):
     CPD_times.append(CPD_end_time - CPD_start_time)
     # Predict (mse is returned by the predict function)
     CPD_prediction_mean, CPD_prediction_std, _ = BTNKM.predict(
-        features=X_test, input_dimension=20
+        features=X_test, input_dimension=feature_dimension
     )
 
     CPD_prediction_mean_unscaled = CPD_prediction_mean * Y_std + Y_mean
