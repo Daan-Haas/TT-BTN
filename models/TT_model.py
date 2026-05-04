@@ -36,10 +36,10 @@ class BTTKM:
               g_0=None, h_0=None,
               lambda_update=False,
               delta_update=False,
-              convergence_bound=1e-4, iteration_limit=1000,
+              convergence_bound=1e-4,
+              max_iter=100,
               rank_pruning=False,
-              feature_pruning=False,
-              plotting=True):
+              plotting=False):
         print("Training")
         self.feature_map = self.kernel(X, max(self.M))
         self.N = X.shape[0]
@@ -75,7 +75,7 @@ class BTTKM:
 
         ELBO = [-np.inf]
         it = 0
-        pbar = trange(iteration_limit, desc="Running", leave=True)
+        pbar = trange(max_iter, desc="Running", leave=True)
         for it in pbar:
             # cores update
             for d in range(self.D):
@@ -264,7 +264,7 @@ class BTTKM:
                 print("model collapsed")
                 break
 
-        if it == iteration_limit:
+        if it == max_iter:
             # noise precision update
             self.a_N = a_0 + self.N / 2
             Expectation_G = self.forward_accumulator_G(self.D)
@@ -306,7 +306,7 @@ class BTTKM:
         return G_k
 
     def backward_accumulator_G(self, d):
-        G_k = np.ones((self.N, 1))
+        G_k = np.ones((self.N, 1)) # N x 1
         for k in range(self.D-1, d, -1):
             G_k = khatri_rao(self.feature_map[k], G_k) @ unfold(self.W[k], 1).T
         return G_k # N x R_d
