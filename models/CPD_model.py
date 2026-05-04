@@ -43,7 +43,7 @@ class btnkm:
     """A general non-linear using kernel machine y = \Phi w + e, where y is output, \Phi is the
     input matrix, w is the model weigths, and e is the error term."""
 
-    def __init__(self, D: int, input_dimension, max_rank) -> None:
+    def __init__(self, input_dimension, feature_rank, max_rank) -> None:
         """Initialize the model.
 
         Parameters
@@ -51,9 +51,10 @@ class btnkm:
         """
 
         # initialize the factor matrices
-        I = input_dimension
+        D = input_dimension
+        M = feature_rank
         R = max_rank
-        self.W_D = [np.random.randn(I, R) for _ in range(D)]  #  IXR
+        self.W_D = [np.random.randn(M, R) for _ in range(D)]  #  MXR
 
     def train(
         self,
