@@ -13,7 +13,6 @@ with open("data/adult.csv") as adult_data:
     data = pd.read_csv(adult_data, header=None, low_memory=False)
     data = data.values[1:,:]
     data = data.astype(float)
-print(data)
 
 X = data[:,:-1]
 Y = data[:,-1]
