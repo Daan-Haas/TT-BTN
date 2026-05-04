@@ -135,7 +135,7 @@ for i in range(10):
         y_test_binary * np.log(y_pred_prob)
         + (1 - y_test_binary) * np.log(1 - y_pred_prob)
     )
-    CPD_nll_values.append(nll)
+    CPD_nlls.append(nll)
 
     # plt.scatter(X_test[:,0], Y_test, alpha=0.7)
     # plt.scatter(X_test[:,0], TT_predictions_mean_unscaled, alpha=0.7)
