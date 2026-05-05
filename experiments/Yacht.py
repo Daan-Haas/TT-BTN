@@ -130,9 +130,9 @@ for i in range(10):
 
     CPD_ranks.append(R)
 
-    plt.scatter(X_test[:,0], Y_test, alpha=0.7)
-    plt.scatter(X_test[:,0], TT_predictions_mean_unscaled, alpha=0.7)
-    plt.show()
+    # plt.scatter(X_test[:,0], Y_test, alpha=0.7)
+    # plt.scatter(X_test[:,0], TT_predictions_mean_unscaled, alpha=0.7)
+    # plt.show()
     print("TT:\n")
     print(f"RMSE:{TT_RMSE[-1]}, nll:{TT_nlls[-1]}, time:{TT_times[-1]}, rank:{max(TT_ranks[-1])}")
     print("\n\nCPD:\n")
