@@ -78,10 +78,18 @@ class BTTKM:
         pbar = trange(max_iter, desc="Running", leave=True)
         for it in pbar:
             # cores update
+            # Calculate cores once
+            H_gt = [self.backward_accumulator_H(d) for d in range(self.D)]
+            self.H_lt = np.ones((self.N, 1))
+
+            G_gt = [self.backward_accumulator_G(d) for d in range(self.D)]
+            self.G_lt = np.ones((self.N, 1))
             for d in range(self.D):
-                H_lt = khatri_rao(self.forward_accumulator_H(d), self.feature_map[d])
-                H_gt = khatri_rao(self.feature_map[d], self.backward_accumulator_H(d))
-                H_d = H_lt.T @ H_gt
+                W_norm = 0
+
+                temp1 = khatri_rao(self.H_lt, self.feature_map[d])
+                temp2 = khatri_rao(self.feature_map[d], H_gt[d])
+                H_d = temp1.T @ temp2
 
                 H_d = H_d.reshape([self.M[d], self.R[d], self.R[d], self.R[d+1], self.R[d+1], self.M[d]], order='F')
                 H_d = H_d.transpose([1,0,3,2,5,4])
@@ -91,8 +99,8 @@ class BTTKM:
                     print(f"H_d not symmetrical: {H_d}")
                     break
 
-                G_lt = khatri_rao(self.feature_map[d], self.forward_accumulator_G(d))
-                G_d = khatri_rao(self.backward_accumulator_G(d), G_lt)
+                temp1 = khatri_rao(self.feature_map[d], self.G_lt)
+                G_d = khatri_rao(G_gt[d], temp1)
 
                 lambda_mat_next = np.diag(self.lambda_R[d+1])
                 lambda_mat_prev = np.diag(self.lambda_R[d])
@@ -105,7 +113,10 @@ class BTTKM:
                 vectorized_W = self.expectation_tau*self.Sigma[d]@G_d.T@Y
                 self.W[d] = vectorized_W.reshape((self.R[d], self.M[d], self.R[d+1]), order='F')
 
-            W_norm = np.max(np.linalg.norm(self.W[d]))
+                self.H_lt = self.forward_H_one_step(self.H_lt, d)
+                self.G_lt = self.forward_G_one_step(self.G_lt, d)
+                W_norm += np.max(np.linalg.norm(self.W[d]))
+
             # # posterior update delta
             if delta_update:
                 for d in range(self.D):
@@ -349,3 +360,23 @@ class BTTKM:
 
             H_k = khatri_rao(khatri_rao(self.feature_map[k], self.feature_map[k]), H_k) @ expectation_WW
         return H_k
+
+    def forward_H_one_step(self, H_lt, d):
+        Wk = unfold(self.W[d], 3).T
+        mean_WW = np.kron(Wk, Wk)
+        mean_WW = mean_WW.reshape([self.R[d],self.M[d],self.R[d],self.M[d],self.R[d+1]**2], order='F')
+        mean_WW = np.transpose(mean_WW,(0,2,1,3,4))
+        mean_WW = mean_WW.reshape([(self.R[d]*self.M[d])**2, self.R[d+1]**2], order='F')
+
+        covariance_shape = (self.R[d], self.M[d], self.R[d+1], self.R[d], self.M[d], self.R[d+1])
+        covariance_WW = self.Sigma[d].reshape(covariance_shape, order='F')
+        covariance_WW = np.transpose(covariance_WW, [0,3, 1,4, 2,5])
+        covariance_WW = covariance_WW.reshape([(self.R[d]*self.M[d])**2, self.R[d+1]**2], order='F')
+
+        expectation_WW = np.add(mean_WW, covariance_WW)
+        H_k = khatri_rao(khatri_rao(self.feature_map[d], self.feature_map[d]), H_lt) @ expectation_WW
+        return H_k
+
+    def forward_G_one_step(self, G_lt, d):
+        G_k = khatri_rao(self.feature_map[d], G_lt) @ unfold(self.W[d], 3).T
+        return G_k

@@ -64,7 +64,7 @@ for i in range(10):
     BTTKM.train(X_train, Y_train,
                 a_0=a, b_0=b,
                 c_0=c, d_0=d,
-                max_iter=1,
+                max_iter=50,
                 plotting=False,
                 convergence_bound=1e-4,
                 lambda_update=True,
