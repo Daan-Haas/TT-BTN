@@ -144,13 +144,13 @@ for i in range(10):
     # plt.scatter(X_test[:,0], TT_predictions_mean_unscaled, alpha=0.7)
     # plt.show()
     print("TT:\n")
-    print(f"RMSE:{TT_RMSE[-1]}, nll:{TT_nlls[-1]}, time:{TT_times[-1]}, rank:{max(TT_ranks[-1])}")
+    print(f"RMSE:{TT_RMSE[-1]}, nll:{TT_nlls[-1]}, time:{TT_times[-1]}, rank:{np.mean(TT_ranks[-1])}")
     print("\n\nCPD:\n")
     print(f"RMSE:{CPD_RMSE[-1]}, nll:{CPD_nlls[-1]}, time:{CPD_times[-1]}, rank:{CPD_ranks[-1]}")
 
 print("TT:\n")
 print(
-    f"mean RMSE:{np.mean(TT_RMSE)} with standard deviation:{np.std(TT_RMSE)}, rank:{np.mean([max(TT_rank) for TT_rank in TT_ranks])}, in {np.sum(TT_times)} seconds")
+    f"mean RMSE:{np.mean(TT_RMSE)} with standard deviation:{np.std(TT_RMSE)}, rank:{np.mean([np.mean(TT_rank) for TT_rank in TT_ranks])}, in {np.sum(TT_times)} seconds")
 print(f"mean nll:{np.mean(TT_nlls)} with standard deviation:{np.std(TT_nlls)}")
 print("\n\nCPD:\n")
 print(
