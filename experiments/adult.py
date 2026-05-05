@@ -18,7 +18,7 @@ X = data[:,:-1]
 Y = data[:,-1]
 Y = np.where(Y > 0, 1, -1)
 
-feature_dimension = 20
+feature_dimension = 40
 max_rank_TT = 3
 max_rank_CPD = 25
 
