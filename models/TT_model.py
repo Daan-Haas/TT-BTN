@@ -79,10 +79,17 @@ class BTTKM:
         for it in pbar:
             # cores update
             # Calculate cores once
-            H_gt = [self.backward_accumulator_H(d) for d in range(self.D)]
-            self.H_lt = np.ones((self.N, 1))
+            H_d = np.ones((self.N, 1))
+            G_d = np.ones((self.N, 1))
+            H_gt = []
+            G_gt = []
+            for d in range(self.D,0,-1):
+                H_gt.insert(0, H_d)
+                G_gt.insert(0, G_d)
+                H_d = self.backward_H_one_step(H_d, d-1)
+                G_d = self.backward_G_one_step(G_d, d-1)
 
-            G_gt = [self.backward_accumulator_G(d) for d in range(self.D)]
+            self.H_lt = np.ones((self.N, 1))
             self.G_lt = np.ones((self.N, 1))
             for d in range(self.D):
                 W_norm = 0
@@ -377,6 +384,28 @@ class BTTKM:
         H_k = khatri_rao(khatri_rao(self.feature_map[d], self.feature_map[d]), H_lt) @ expectation_WW
         return H_k
 
+    def backward_H_one_step(self, H_gt, d):
+        Wk = unfold(self.W[d], 1).T
+        mean_WW = np.kron(Wk, Wk)
+        mean_WW = mean_WW.reshape([self.R[d + 1], self.M[d], self.R[d + 1], self.M[d], self.R[d] ** 2], order='F')
+
+        mean_WW = np.transpose(mean_WW, [0, 2, 1, 3, 4])
+        mean_WW = mean_WW.reshape([(self.R[d + 1] * self.M[d]) ** 2, self.R[d] ** 2], order='F')
+
+        covariance_shape = (self.R[d], self.M[d], self.R[d + 1], self.R[d], self.M[d], self.R[d + 1])
+        covariance_WW = self.Sigma[d].reshape(covariance_shape, order='F')
+        covariance_WW = np.transpose(covariance_WW, [2, 5, 1, 4, 0, 3])
+        covariance_WW = covariance_WW.reshape([(self.M[d] * self.R[d + 1]) ** 2, self.R[d] ** 2], order='F')
+
+        expectation_WW = np.add(mean_WW, covariance_WW)
+
+        H_k = khatri_rao(khatri_rao(self.feature_map[d], self.feature_map[d]), H_gt) @ expectation_WW
+        return H_k
+
     def forward_G_one_step(self, G_lt, d):
         G_k = khatri_rao(self.feature_map[d], G_lt) @ unfold(self.W[d], 3).T
+        return G_k
+
+    def backward_G_one_step(self, G_gt, d):
+        G_k = khatri_rao(self.feature_map[d], G_gt) @ unfold(self.W[d], 1).T
         return G_k
