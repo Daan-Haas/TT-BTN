@@ -16,6 +16,7 @@ with open("data/spambase.csv") as spambase_data:
 
 X = data[:,:-1]
 Y = data[:,-1]
+Y = np.array([float(y[0]) if isinstance(y, (list, np.ndarray)) else float(y) for y in Y])
 Y = np.where(Y > 0, 1, -1)
 
 feature_dimension = 30
@@ -55,7 +56,7 @@ for i in range(10):
     R = [1]+R+[1]
     M = [feature_dimension for _ in range(D)]
 
-    a, b = 1e-1,1e-3
+    a, b = 1e-2,1e-3
     c, d = [1e-5 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
