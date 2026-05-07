@@ -10,12 +10,19 @@ from models import TT_model, CPD_model
 from kernels import pure_power_features_full
 
 with open("data/adult.csv") as adult_data:
-    data = pd.read_csv(adult_data, header=None, low_memory=False)
-    data = data.values[1:,:]
-    data = data.astype(float)
+    df = pd.read_csv(
+        adult_data,
+        header=None,
+        low_memory=False,
+    )
+    df.columns = df.iloc[0]
+    df = df[1:]
+    df.reset_index(drop=True, inplace=True)
+    df = df.values
+    df = df.astype(float)
 
-X = data[:,:-1]
-Y = data[:,-1]
+X = df[:,:-1]
+Y = df[:,-1]
 Y = np.where(Y > 0, 1, -1)
 
 feature_dimension = 40

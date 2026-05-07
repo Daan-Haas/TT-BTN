@@ -10,18 +10,21 @@ from models import TT_model, CPD_model
 from kernels import pure_power_features_full
 
 with open("data/spambase.csv") as spambase_data:
-    data = pd.read_csv(spambase_data, header=None)
-    data = data.values[1:,:]
-    data = data.astype(float)
+    df = pd.read_csv(spambase_data, header=None)
+    df.columns = df.iloc[0]
+    df = df[1:]
+    df.reset_index(drop=True, inplace=True)
+    df = df.values
+    df = df.astype(float)
 
-X = data[:,:-1]
-Y = data[:,-1]
+X = df[:,:-1]
+Y = df[:,-1]
 Y = np.array([float(y[0]) if isinstance(y, (list, np.ndarray)) else float(y) for y in Y])
 Y = np.where(Y > 0, 1, -1)
 
 feature_dimension = 30
-CPD_max_rank = 25
-TT_max_rank = 5
+CPD_max_rank = 10
+TT_max_rank = 3
 
 TT_RMSE = []
 TT_nlls = []
