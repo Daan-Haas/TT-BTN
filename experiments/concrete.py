@@ -33,6 +33,7 @@ CPD_ranks = []
 CPD_times = []
 
 for i in range(10):
+    print(f"Concrete, repeat {i}")
     np.random.seed(i)
     indices = np.random.permutation(len(X))
     split_index = int(0.90 * len(X))  # 90% for training, 10% for testing
