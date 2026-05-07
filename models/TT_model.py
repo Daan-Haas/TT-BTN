@@ -114,7 +114,7 @@ class BTTKM:
                 delta_mat = np.diag(self.delta[d])
 
                 variance_term = np.kron(np.kron(lambda_mat_next, delta_mat), lambda_mat_prev)
-                self.Sigma[d] = np.linalg.inv(np.add(self.expectation_tau*H_d, variance_term))
+                self.Sigma[d] = np.linalg.pinv(np.add(self.expectation_tau*H_d, variance_term))
                 self.var[d] = np.diag(self.Sigma[d])
 
                 vectorized_W = self.expectation_tau*self.Sigma[d]@G_d.T@Y
