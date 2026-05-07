@@ -120,7 +120,7 @@ for i in range(10):
     # Predict (mse is returned by the predict function)
     prediction_mean, prediction_std, mse = BTNKM.predict(
         features=X_test,
-        input_dimension=20,
+        input_dimension=feature_dimension,
         true_values=Y_test,
         classification=True,
     )
