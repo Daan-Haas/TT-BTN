@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from experiments.Yacht import max_rank_CPD
 from models import TT_model, CPD_model
 from kernels import pure_power_features_full
 
@@ -58,7 +57,7 @@ for i in range(10):
     M = [feature_dimension for _ in range(X_train.shape[1])]
 
     a, b = 1e-1, 1e-3
-    c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
+    c, d = [1e-5 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
     BTTKM = TT_model.BTTKM(D, R, M, pure_power_features_full)
