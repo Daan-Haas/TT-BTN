@@ -41,7 +41,7 @@ class BTTKM:
               rank_pruning=False,
               plotting=False):
         print("Training")
-        self.feature_map = self.kernel(X, max(self.M)) + 0.2
+        self.feature_map = self.kernel(X, max(self.M)) + 0.4
         self.N = X.shape[0]
         self.a_N = a_0
         self.b_N = b_0
@@ -279,9 +279,9 @@ class BTTKM:
                 self.expectation_tau = self.a_N / self.b_N
                 print("Convergence bound reached, exiting")
                 break
-            if W_norm < 1e-100 or np.isnan(W_norm):
-                print("model collapsed")
-                break
+            # if W_norm < 1e-100 or np.isnan(W_norm):
+            #     print("model collapsed")
+            #     break
 
         if it == max_iter:
             # noise precision update
