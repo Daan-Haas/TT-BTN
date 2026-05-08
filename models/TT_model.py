@@ -41,7 +41,7 @@ class BTTKM:
               rank_pruning=False,
               plotting=False):
         print("Training")
-        self.feature_map = self.kernel(X, max(self.M))
+        self.feature_map = self.kernel(X, max(self.M)) + 0.2
         self.N = X.shape[0]
         self.a_N = a_0
         self.b_N = b_0
@@ -105,7 +105,7 @@ class BTTKM:
 
                 if np.max(abs(H_d.T - H_d))/np.linalg.norm(H_d) > 1e-6:
                     print(f"H_d not symmetrical: {H_d}")
-                    # break
+                    break
 
                 temp1 = khatri_rao(self.feature_map[d], self.G_lt)
                 G_d = khatri_rao(G_gt[d], temp1)
