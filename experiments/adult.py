@@ -27,7 +27,7 @@ Y = np.where(Y > 0, 1, -1)
 
 feature_dimension = 40
 max_rank_TT = 3
-max_rank_CPD = 25
+max_rank_CPD = 10
 
 TT_RMSE = []
 TT_nlls = []
