@@ -96,6 +96,7 @@ class BTTKM:
 
                 temp1 = khatri_rao(self.H_lt, self.feature_map[d])
                 temp2 = khatri_rao(self.feature_map[d], H_gt[d])
+                print(np.norm(temp1), np.norm(temp2))
                 H_d = temp1.T @ temp2
 
                 H_d = H_d.reshape([self.M[d], self.R[d], self.R[d], self.R[d+1], self.R[d+1], self.M[d]], order='F')
