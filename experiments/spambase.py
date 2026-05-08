@@ -46,11 +46,11 @@ for i in range(10):
     X_train, X_test = X[indices[:split_index]], X[indices[split_index:]]
     Y_train, Y_test = Y[indices[:split_index]], Y[indices[split_index:]]
 
-    # X_mean = X_train.mean(axis=0)
-    # X_std = X_train.std(axis=0)
-    # X_std[X_std == 0] = 1
-    # X_train = (X_train - X_mean) / X_std
-    # X_test = (X_test - X_mean) / X_std  # Use train stats
+    X_mean = X_train.mean(axis=0)
+    X_std = X_train.std(axis=0)
+    X_std[X_std == 0] = 1
+    X_train = (X_train - X_mean) / X_std
+    X_test = (X_test - X_mean) / X_std  # Use train stats
 
     D = X_train.shape[1]
     N = X_train.shape[0]
