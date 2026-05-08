@@ -41,7 +41,7 @@ class BTTKM:
               rank_pruning=False,
               plotting=False):
         print("Training")
-        self.feature_map = self.kernel(X, max(self.M)) + 0.2
+        self.feature_map = self.kernel(X, max(self.M)) + 0.4
         self.N = X.shape[0]
         self.a_N = a_0
         self.b_N = b_0
