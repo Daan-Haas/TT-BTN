@@ -82,7 +82,7 @@ for i in range(10):
 
     predictions_mean, predictions_std = BTTKM.predict(X_test)
 
-    accuracy = 1 - accuracy_score(Y_test, np.sign(predictions_mean))
+    accuracy = 1 - accuracy_score(Y_test, -np.sign(predictions_mean))
     TT_RMSE.append(accuracy)
 
     probs_gt_zero = norm.sf(0, loc=predictions_mean, scale=predictions_std)  # P(y > 0)
