@@ -18,14 +18,14 @@ Y = data[:,-1]
 TT_RMSE = []
 TT_nlls = []
 BTTKM_time = []
-TT_ranks = []
+TT_total_features = []
 TT_times = []
 
 
 CPD_RMSE = []
 CPD_nlls = []
 TN_BKM_time = []
-CPD_ranks = []
+CPD_total_features = []
 CPD_times = []
 
 for i in range(10):
@@ -71,7 +71,7 @@ for i in range(10):
     TT_end_time = time.time()
     TT_times.append(TT_end_time - TT_start_time)
 
-    TT_ranks.append(BTTKM.R)
+    TT_total_features.append(np.mean([BTTKM.R[d]*BTTKM])
 
     TT_predictions_mean, TT_predictions_std = BTTKM.predict(X_test)
     TT_predictions_mean_unscaled = (TT_predictions_mean*Y_std) + Y_mean
