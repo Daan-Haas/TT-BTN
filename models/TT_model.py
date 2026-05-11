@@ -38,10 +38,11 @@ class BTTKM:
               delta_update=False,
               convergence_bound=1e-4,
               max_iter=100,
+              fm_bias = 0,
               rank_pruning=False,
               plotting=False):
         print("Training")
-        self.feature_map = self.kernel(X, max(self.M)) + 0.3
+        self.feature_map = self.kernel(X, max(self.M)) + fm_bias
         self.N = X.shape[0]
         self.a_N = a_0
         self.b_N = b_0
@@ -88,6 +89,7 @@ class BTTKM:
                 G_gt.insert(0, G_d)
                 H_d = self.backward_H_one_step(H_d, d-1)
                 G_d = self.backward_G_one_step(G_d, d-1)
+                print(np.linalg.norm(H_d))
 
             self.H_lt = np.ones((self.N, 1))
             self.G_lt = np.ones((self.N, 1))
