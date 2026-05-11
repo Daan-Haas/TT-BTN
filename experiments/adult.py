@@ -75,6 +75,7 @@ for i in range(10):
                 max_iter=50,
                 plotting=False,
                 convergence_bound=1e-4,
+                fm_bias=0.4
                 lambda_update=True,
                 delta_update=True,
                 rank_pruning=True)
