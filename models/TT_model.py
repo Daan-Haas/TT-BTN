@@ -281,9 +281,9 @@ class BTTKM:
                 self.expectation_tau = self.a_N / self.b_N
                 print("Convergence bound reached, exiting")
                 break
-            # if W_norm < 1e-100 or np.isnan(W_norm):
-            #     print("model collapsed")
-            #     break
+            if W_norm < 1e-100 or np.isnan(W_norm):
+                print("model collapsed")
+                break
 
         if it == max_iter:
             # noise precision update
