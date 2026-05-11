@@ -90,7 +90,6 @@ class BTTKM:
                 G_gt.insert(0, G_d)
                 H_d = self.backward_H_one_step(H_d, d-1)
                 G_d = self.backward_G_one_step(G_d, d-1)
-                print(np.linalg.norm(H_d))
 
             self.H_lt = np.ones((self.N, 1))
             self.G_lt = np.ones((self.N, 1))
@@ -105,9 +104,10 @@ class BTTKM:
                 H_d = H_d.transpose([1,0,3,2,5,4])
                 H_d = H_d.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F')
 
-                if np.max(abs(H_d.T - H_d))/np.linalg.norm(H_d) > 1e-6 and safe_training:
+                if np.max(abs(H_d.T - H_d))/np.linalg.norm(H_d) > 1e-6:
                     print(f"H_d not symmetrical: {H_d}")
-                    break
+                    if safe_training:
+                        break
 
                 temp1 = khatri_rao(self.feature_map[d], self.G_lt)
                 G_d = khatri_rao(G_gt[d], temp1)
