@@ -75,10 +75,11 @@ for i in range(10):
                 max_iter=50,
                 plotting=False,
                 convergence_bound=1e-4,
-                fm_bias=0.4
+                fm_bias=0.4,
                 lambda_update=True,
                 delta_update=True,
-                rank_pruning=True)
+                rank_pruning=True,
+                safe_training=False)
     TT_end_time = time.time()
     TT_times.append(TT_end_time - TT_start_time)
 

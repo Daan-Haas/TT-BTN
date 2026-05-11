@@ -40,7 +40,8 @@ class BTTKM:
               max_iter=100,
               fm_bias = 0,
               rank_pruning=False,
-              plotting=False):
+              plotting=False,
+              safe_training= True):
         print("Training")
         self.feature_map = self.kernel(X, max(self.M)) + fm_bias
         self.N = X.shape[0]
@@ -104,7 +105,7 @@ class BTTKM:
                 H_d = H_d.transpose([1,0,3,2,5,4])
                 H_d = H_d.reshape([self.R[d]*self.M[d]*self.R[d+1], self.R[d]*self.M[d]*self.R[d+1]], order='F')
 
-                if np.max(abs(H_d.T - H_d))/np.linalg.norm(H_d) > 1e-6:
+                if np.max(abs(H_d.T - H_d))/np.linalg.norm(H_d) > 1e-6 and safe_training:
                     print(f"H_d not symmetrical: {H_d}")
                     break
 
