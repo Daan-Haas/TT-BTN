@@ -151,25 +151,25 @@ for i in range(10):
     # plt.scatter(X_test[:,0], TT_predictions_mean_unscaled, alpha=0.7)
     # plt.show()
     print("TT:\n")
-    print(f"RMSE:{TT_RMSE[-1]}, nll:{TT_nlls[-1]}, time:{TT_times[-1]}, rank:{TT_total_features[-1]}")
+    print(f"RMSE:{TT_RMSE[-1]}, nll:{TT_nlls[-1]}, time:{TT_times[-1]}, nr features:{TT_total_features[-1]}")
     print("\n\nCPD:\n")
-    print(f"RMSE:{CPD_RMSE[-1]}, nll:{CPD_nlls[-1]}, time:{CPD_times[-1]}, rank:{CPD_total_features[-1]}")
+    print(f"RMSE:{CPD_RMSE[-1]}, nll:{CPD_nlls[-1]}, time:{CPD_times[-1]}, nr features:{CPD_total_features[-1]}")
 
 print("TT:\n")
 print(
-    f"mean RMSE:{np.mean(TT_RMSE)} with standard deviation:{np.std(TT_RMSE)}, rank:{np.mean(TT_total_features)}, in {np.sum(TT_times)} seconds")
+    f"mean RMSE:{np.mean(TT_RMSE)} with standard deviation:{np.std(TT_RMSE)}, nr features:{np.mean(TT_total_features)}, in {np.sum(TT_times)} seconds")
 print(f"mean nll:{np.mean(TT_nlls)} with standard deviation:{np.std(TT_nlls)}")
 print("\n\nCPD:\n")
 print(
-    f"mean RMSE:{np.mean(CPD_RMSE)} with standard deviation:{np.std(CPD_RMSE)}, rank:{np.mean(CPD_total_features)}, in {np.sum(CPD_times)} seconds")
+    f"mean RMSE:{np.mean(CPD_RMSE)} with standard deviation:{np.std(CPD_RMSE)}, nr features:{np.mean(CPD_total_features)}, in {np.sum(CPD_times)} seconds")
 print(f"mean nll:{np.mean(CPD_nlls)} with standard deviation:{np.std(CPD_nlls)}")
 
 with open("adult.txt", "w") as f:
     f.write(f"TT:\n"
             f"mean RMSE:{np.mean(TT_RMSE)} with standard deviation:{np.std(TT_RMSE)}\n"
             f"mean nll:{np.mean(TT_nlls)} with standard deviation:{np.std(TT_nlls)}\n"
-            f"average rank:{np.mean(TT_total_features)}, trained in {np.sum(TT_times)} seconds"
+            f"average nr features:{np.mean(TT_total_features)}, trained in {np.sum(TT_times)} seconds"
             f"\n\nCPD:\n"
             f"mean RMSE:{np.mean(CPD_RMSE)} with standard deviation:{np.std(CPD_RMSE)}\n"
             f"mean nll:{np.mean(CPD_nlls)} with standard deviation:{np.std(CPD_nlls)}\n"
-            f"average rank:{np.mean(CPD_total_features)}, trained in {np.sum(CPD_times)} seconds")
+            f"average nr features:{np.mean(CPD_total_features)}, trained in {np.sum(CPD_times)} seconds")

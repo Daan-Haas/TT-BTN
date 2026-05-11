@@ -22,14 +22,14 @@ max_rank_TT = 5
 TT_RMSE = []
 TT_nlls = []
 BTTKM_time = []
-TT_ranks = []
+TT_total_features = []
 TT_times = []
 
 
 CPD_RMSE = []
 CPD_nlls = []
 TN_BKM_time = []
-CPD_ranks = []
+CPD_total_features = []
 CPD_times = []
 
 for i in range(10):
@@ -75,7 +75,7 @@ for i in range(10):
     TT_end_time = time.time()
     TT_times.append(TT_end_time - TT_start_time)
 
-    TT_ranks.append(BTTKM.R)
+    TT_total_features.append(np.mean([BTTKM.R[d]*BTTKM.M[d]*BTTKM.R[d+1] for d in range(D)]))
 
     TT_predictions_mean, TT_predictions_std = BTTKM.predict(X_test)
     TT_predictions_mean_unscaled = (TT_predictions_mean * Y_std) + Y_mean
@@ -132,31 +132,31 @@ for i in range(10):
     rmse = np.sqrt(np.mean((CPD_prediction_mean_unscaled - Y_test) ** 2))
     CPD_RMSE.append(rmse)
 
-    CPD_ranks.append(R)
+    CPD_total_features.append(R*feature_dimension)
 
     # plt.scatter(X_test[:,0], Y_test, alpha=0.7)
     # plt.scatter(X_test[:,0], TT_predictions_mean_unscaled, alpha=0.7)
     # plt.show()
     print("TT:\n")
-    print(f"RMSE:{TT_RMSE[-1]}, nll:{TT_nlls[-1]}, time:{TT_times[-1]}, rank:{np.mean(TT_ranks[-1])}")
+    print(f"RMSE:{TT_RMSE[-1]}, nll:{TT_nlls[-1]}, time:{TT_times[-1]}, nr features:{TT_total_features[-1]}")
     print("\n\nCPD:\n")
-    print(f"RMSE:{CPD_RMSE[-1]}, nll:{CPD_nlls[-1]}, time:{CPD_times[-1]}, rank:{CPD_ranks[-1]}")
+    print(f"RMSE:{CPD_RMSE[-1]}, nll:{CPD_nlls[-1]}, time:{CPD_times[-1]}, nr features:{CPD_total_features[-1]}")
 
 print("TT:\n")
 print(
-    f"mean RMSE:{np.mean(TT_RMSE)} with standard deviation:{np.std(TT_RMSE)}, rank:{np.mean([np.mean(TT_rank) for TT_rank in TT_ranks])}, in {np.sum(TT_times)} seconds")
+    f"mean RMSE:{np.mean(TT_RMSE)} with standard deviation:{np.std(TT_RMSE)}, nr features:{np.mean(TT_total_features)}, in {np.sum(TT_times)} seconds")
 print(f"mean nll:{np.mean(TT_nlls)} with standard deviation:{np.std(TT_nlls)}")
 print("\n\nCPD:\n")
 print(
-    f"mean RMSE:{np.mean(CPD_RMSE)} with standard deviation:{np.std(CPD_RMSE)}, rank:{np.mean(CPD_ranks)}, in {np.sum(CPD_times)} seconds")
+    f"mean RMSE:{np.mean(CPD_RMSE)} with standard deviation:{np.std(CPD_RMSE)}, nr features:{np.mean(CPD_total_features)}, in {np.sum(CPD_times)} seconds")
 print(f"mean nll:{np.mean(CPD_nlls)} with standard deviation:{np.std(CPD_nlls)}")
 
 with open("airfoil.txt", "w") as f:
     f.write(f"TT:\n"
             f"mean RMSE:{np.mean(TT_RMSE)} with standard deviation:{np.std(TT_RMSE)}\n"
             f"mean nll:{np.mean(TT_nlls)} with standard deviation:{np.std(TT_nlls)}\n"
-            f"average rank:{np.mean(TT_ranks)}, trained in {np.sum(TT_times)} seconds"
+            f"average nr features:{np.mean(TT_total_features)}, trained in {np.sum(TT_times)} seconds"
             f"\n\nCPD:\n"
             f"mean RMSE:{np.mean(CPD_RMSE)} with standard deviation:{np.std(CPD_RMSE)}\n"
             f"mean nll:{np.mean(CPD_nlls)} with standard deviation:{np.std(CPD_nlls)}\n"
-            f"average rank:{np.mean(CPD_ranks)}, trained in {np.sum(CPD_times)} seconds")
+            f"average nr features:{np.mean(CPD_total_features)}, trained in {np.sum(CPD_times)} seconds")
