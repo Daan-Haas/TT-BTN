@@ -43,6 +43,7 @@ class BTTKM:
               plotting=False,
               safe_training= True):
         print("Training")
+        self.fm_bias = fm_bias
         self.feature_map = self.kernel(X, max(self.M)) + fm_bias
         self.N = X.shape[0]
         self.a_N = a_0
@@ -305,7 +306,7 @@ class BTTKM:
             plt.show()
 
     def predict(self, X, classification=False):
-        self.feature_map = self.kernel(X, max(self.M))
+        self.feature_map = self.kernel(X, max(self.M)) + self.fm_bias
         self.N = self.feature_map.shape[1]
         predicted_mean = self.forward_accumulator_G(self.D)
 
