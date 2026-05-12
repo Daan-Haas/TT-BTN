@@ -75,7 +75,8 @@ for i in range(10):
                 fm_bias=0.3,
                 lambda_update=True,
                 delta_update=True,
-                rank_pruning=True)
+                rank_pruning=True,
+                safe_training=False)
     TT_end_time = time.time()
     TT_times.append(TT_end_time - TT_start_time)
 
