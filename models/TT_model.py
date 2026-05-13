@@ -126,7 +126,7 @@ class BTTKM:
 
                 self.H_lt = self.forward_H_one_step(self.H_lt, d)
                 self.G_lt = self.forward_G_one_step(self.G_lt, d)
-                W_norm += np.max(np.linalg.norm(self.W[d]))
+                W_norm += np.linalg.norm(self.W[d])
 
             # # posterior update delta
             if delta_update:

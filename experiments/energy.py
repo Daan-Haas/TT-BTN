@@ -131,7 +131,7 @@ for i in range(10):
     rmse = np.sqrt(np.mean((CPD_prediction_mean_unscaled - Y_test) ** 2))
     CPD_RMSE.append(rmse)
 
-    CPD_total_features.append(R*feature_dimension)
+    CPD_total_features.append(D*R*feature_dimension)
 
     # plt.scatter(X_test[:,0], Y_test, alpha=0.7)
     # plt.scatter(X_test[:,0], TT_predictions_mean_unscaled, alpha=0.7)

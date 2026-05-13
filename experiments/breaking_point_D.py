@@ -50,11 +50,11 @@ for D in Ds:
         lower_bound = 1
         for i in range(D-1):
             if i == 0:
-                TT_model.W[i] = CPD_model.W_D[i].reshape([1,3,3])
+                TT_model.W[i] = 35* CPD_model.W_D[i].reshape([1,3,3])
             else:
                 for j in range(max_rank):
                     for k in range(max_rank):
-                        TT_model.W[i][j,:,k] =  CPD_model.W_D[i][j,:] if j==k else np.zeros(3)
+                        TT_model.W[i][j,:,k] = 35* CPD_model.W_D[i][j,:] if j==k else np.zeros(3)
 
             #calculate bounds
             mag_Phi_d = np.linalg.norm(Phi[i,0])
@@ -75,7 +75,7 @@ for D in Ds:
                     prune_rank=False,
                     plot_results=False
                     )
-        mags_CPD.append(np.linalg.norm(CPD_model.W_D[0]))
+        mags_CPD.append(np.linalg.norm(CPD_model.W_D))
 
         TT_model.train(X, Y,
                        a_0=a, b_0=b,
@@ -83,14 +83,14 @@ for D in Ds:
                        max_iter=10,
                        convergence_bound=1e-2,
                        plotting=False)
-        mags_TT.append(np.linalg.norm(unfold(TT_model.W[0], 3)))
+        mags_TT.append(np.linalg.norm(TT_model.W))
 
         tries += 1
-        if np.linalg.norm(CPD_model.W_D) == 0:
+        if mags_CPD[-1] == 0:
             CPD_failures += 1
-        if max([np.linalg.norm(TT_model.W[d]) for d in range(D)]) < 1e-16 or all(np.isnan([np.linalg.norm(TT_model.W[d]) for d in range(D)])):
+        if mags_TT[-1] == 0 or all(np.isnan([np.linalg.norm(TT_model.W[d]) for d in range(D)])):
             TT_failures += 1
-        print(f'after {tries} attempts, CPD norm = {np.linalg.norm(CPD_model.W_D)}, TT norm = {max([np.linalg.norm(TT_model.W[d]) for d in range(D)])}')
+        print(f'after {tries} attempts, CPD norm = {mags_CPD[-1]}, TT norm = {mags_TT[-1]}')
     print(f'with {D} cores, {CPD_failures} under/overflow errors for CPD, {TT_failures} under/overflow errors for TT.')
     all_CPD_failures.append(CPD_failures)
     all_TT_failures.append(TT_failures)

@@ -135,7 +135,7 @@ for i in range(10):
     )
 
     CPD_RMSE.append(mse)
-    CPD_total_features.append(R*feature_dimension)
+    CPD_total_features.append(D*R*feature_dimension)
     # NLL
     probs_gt_zero = norm.sf(0, loc=prediction_mean, scale=prediction_std)  # P(y > 0)
     y_test_binary = (Y_test + 1) // 2

@@ -145,7 +145,7 @@ for i in range(10):
     )
     CPD_nlls.append(nll)
 
-    CPD_total_features.append(R*feature_dimension)
+    CPD_total_features.append(D*R*feature_dimension)
 
     # plt.scatter(X_test[:,0], Y_test, alpha=0.7)
     # plt.scatter(X_test[:,0], TT_predictions_mean_unscaled, alpha=0.7)
