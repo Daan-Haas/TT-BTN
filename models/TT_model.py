@@ -7,7 +7,7 @@ from utils import khatri_rao, unfold
 from tqdm import tqdm, trange
 
 class BTTKM:
-    def __init__(self, nr_cores, R, M, kernel):
+    def __init__(self, nr_cores, R, M, kernel, scale=1):
         if (len(M) != nr_cores) or (len(R) != nr_cores+1):
             raise ValueError(f"Incorrect number of dimensions or TT ranks, "
                              f"TT with {nr_cores} cores should have {nr_cores} dimensions and {nr_cores+1} ranks")
@@ -17,7 +17,7 @@ class BTTKM:
         self.R = R
         self.M = M
         self.D = nr_cores
-        self.init_cores()
+        self.init_cores(scale)
         size = [self.R[d]*self.M[d]*self.R[d+1] for d in range(self.D)]
         self.Sigma = [0.1*np.eye(size[d]) for d in range(self.D)]
         self.var = [np.ones(size[d]) for d in range(self.D)]
@@ -25,8 +25,8 @@ class BTTKM:
         self.a_N = 1e-2
         self.b_N = 1e-2
 
-    def init_cores(self):
-        core_list = [np.random.standard_normal([self.R[i],self.M[i],self.R[i+1]]) for i in range(self.D)]
+    def init_cores(self, scale):
+        core_list = [scale * np.random.standard_normal([self.R[i],self.M[i],self.R[i+1]]) for i in range(self.D)]
         self.W = core_list
 
     def train(self,
