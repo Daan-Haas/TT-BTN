@@ -122,7 +122,7 @@ class BTTKM:
                 self.Sigma[d] = np.linalg.pinv(np.add(self.expectation_tau*H_d, variance_term))
                 self.var[d] = np.diag(self.Sigma[d])
 
-                vectorized_W = self.expectation_tau*self.Sigma[d]@G_d.T@Y
+                vectorized_W = self.expectation_tau*self.Sigma[d]@G_d.T@Y.T
                 print(np.linalg.norm(G_gt[d]), np.linalg.norm(self.feature_map[d]), np.linalg.norm(self.G_lt))
                 self.W[d] = vectorized_W.reshape((self.R[d], self.M[d], self.R[d+1]), order='F')
 
@@ -246,14 +246,11 @@ class BTTKM:
                 L2_norms += np.trace(variance_term @ (np.outer(self.W[d].reshape((-1,1)), self.W[d].reshape((-1,1)))
                                                       + np.diag(self.var[d])))
                 ln_q_W += 0.5*np.log(np.linalg.norm(self.Sigma[d])) + (self.R[d]*self.M[d]/2)*(1+np.log(2*np.pi))
-                for r in range(self.R[d]):
-                    lambda_term += ((1-np.log(self.d_N[d][r])
-                                    - (d_0[d][r]/self.d_N[d][r]))*self.c_N[d][r]
-                                    + np.log(gamma(self.c_N[d][r])))
-                for m in range(self.M[d]):
-                    delta_term += (np.log(gamma(self.g_N[d][m]))
-                                   + (1-np.log(self.h_N[d][m])
-                                   - (h_0[d][m]/self.h_N[d][m]))*self.g_N[d][m])
+
+                gamc = np.array([gamma(cr) for cr in self.c_N[d]])
+                gamg = np.array([gamma(gr) for gr in self.g_N[d]])
+                lambda_term = ((1-np.log(self.d_N[d]) - (d_0[d]/self.d_N[d]))*self.c_N[d] + np.log(gamc))
+                delta_term = (np.log(gamg) + (1-np.log(self.h_N[d])- (h_0[d]/self.h_N[d]))*self.g_N[d][m])
 
             tau_term = (1 - np.log(self.b_N) - (b_0/self.b_N))*self.a_N + np.log(gamma(self.a_N))
             ELBO.append(-error_term - L2_norms - ln_q_W - lambda_term - delta_term - tau_term)
