@@ -113,7 +113,7 @@ class BTTKM:
 
                 temp1 = khatri_rao(self.feature_map[d], self.G_lt)
                 G_d = khatri_rao(G_gt[d], temp1)
-                print(np.linalg.norm(self.G_lt), np.linalg.norm(self.feature_map[d]))
+
                 lambda_mat_next = np.diag(self.lambda_R[d+1])
                 lambda_mat_prev = np.diag(self.lambda_R[d])
                 delta_mat = np.diag(self.delta[d])
@@ -123,6 +123,7 @@ class BTTKM:
                 self.var[d] = np.diag(self.Sigma[d])
 
                 vectorized_W = self.expectation_tau*self.Sigma[d]@G_d.T@Y
+                print(self.expectation_tau, np.linalg.norm(self.Sigma[d]), self.linalg.norm(G_d), np.linalg.norm(Y))
                 self.W[d] = vectorized_W.reshape((self.R[d], self.M[d], self.R[d+1]), order='F')
 
                 self.H_lt = self.forward_H_one_step(self.H_lt, d)
@@ -408,7 +409,6 @@ class BTTKM:
         return H_k
 
     def forward_G_one_step(self, G_lt, d):
-        print(np.linalg.norm(unfold(self.W[d], 3).T))
         G_k = khatri_rao(self.feature_map[d], G_lt) @ unfold(self.W[d], 3).T
         return G_k
 
