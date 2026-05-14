@@ -113,7 +113,7 @@ class BTTKM:
 
                 temp1 = khatri_rao(self.feature_map[d], self.G_lt)
                 G_d = khatri_rao(G_gt[d], temp1)
-                print(np.linalg.norm(self.H_lt), np.linalg.norm(self.feature_map[d]))
+                print(np.linalg.norm(self.G_lt), np.linalg.norm(self.feature_map[d]))
                 lambda_mat_next = np.diag(self.lambda_R[d+1])
                 lambda_mat_prev = np.diag(self.lambda_R[d])
                 delta_mat = np.diag(self.delta[d])
@@ -408,6 +408,7 @@ class BTTKM:
         return H_k
 
     def forward_G_one_step(self, G_lt, d):
+        print(np.linalg.norm(unfold(self.W[d], 3).T))
         G_k = khatri_rao(self.feature_map[d], G_lt) @ unfold(self.W[d], 3).T
         return G_k
 
