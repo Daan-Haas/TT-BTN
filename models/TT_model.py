@@ -123,7 +123,7 @@ class BTTKM:
                 self.var[d] = np.diag(self.Sigma[d])
 
                 vectorized_W = self.expectation_tau*self.Sigma[d]@G_d.T@Y
-                print(self.expectation_tau, np.linalg.norm(self.Sigma[d]), self.linalg.norm(G_d), np.linalg.norm(Y))
+                print(np.linalg.norm(G_gt[d]), np.linalg.norm(self.feature_map[d]), np.linalg.norm(self.G_lt))
                 self.W[d] = vectorized_W.reshape((self.R[d], self.M[d], self.R[d+1]), order='F')
 
                 self.H_lt = self.forward_H_one_step(self.H_lt, d)
