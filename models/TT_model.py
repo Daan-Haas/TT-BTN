@@ -247,8 +247,8 @@ class BTTKM:
 
                 gamc = np.array([gamma(cr) for cr in self.c_N[d]])
                 gamg = np.array([gamma(gr) for gr in self.g_N[d]])
-                lambda_term = ((1-np.log(self.d_N[d]) - (d_0[d]/self.d_N[d]))*self.c_N[d] + np.log(gamc))
-                delta_term = (np.log(gamg) + (1-np.log(self.h_N[d])- (h_0[d]/self.h_N[d]))*self.g_N[d][m])
+                lambda_term = (1-np.log(self.d_N[d]) - (d_0[d]/self.d_N[d]))*self.c_N[d] + np.log(gamc)
+                delta_term = (1-np.log(self.h_N[d]) - (h_0[d]/self.h_N[d]))*self.g_N[d] + np.log(gamg)
 
             tau_term = (1 - np.log(self.b_N) - (b_0/self.b_N))*self.a_N + np.log(gamma(self.a_N))
             ELBO.append(-error_term - L2_norms - ln_q_W - lambda_term - delta_term - tau_term)
