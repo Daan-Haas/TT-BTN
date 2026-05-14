@@ -91,6 +91,7 @@ class BTTKM:
                 G_gt.insert(0, G_d)
                 H_d = self.backward_H_one_step(H_d, d-1)
                 G_d = self.backward_G_one_step(G_d, d-1)
+                print(np.linalg.norm(H_d), np.linalg.norm(G_d))
 
             self.H_lt = np.ones((self.N, 1))
             self.G_lt = np.ones((self.N, 1))
@@ -112,7 +113,7 @@ class BTTKM:
 
                 temp1 = khatri_rao(self.feature_map[d], self.G_lt)
                 G_d = khatri_rao(G_gt[d], temp1)
-
+                print(np.linalg.norm(G_gt[d]), np.linalg.norm(temp1))
                 lambda_mat_next = np.diag(self.lambda_R[d+1])
                 lambda_mat_prev = np.diag(self.lambda_R[d])
                 delta_mat = np.diag(self.delta[d])

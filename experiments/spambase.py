@@ -64,7 +64,7 @@ for i in range(10):
     c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
-    BTTKM = TT_model.BTTKM(D, R, M, pure_power_features_full, scale=0.01)
+    BTTKM = TT_model.BTTKM(D, R, M, pure_power_features_full, scale=0.1)
     TT_start_time = time.time()
     BTTKM.train(X_train, Y_train,
                 a_0=a, b_0=b,
