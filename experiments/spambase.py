@@ -60,8 +60,8 @@ for i in range(10):
     R = [1]+R+[1]
     M = [feature_dimension for _ in range(D)]
 
-    a, b = 1e1,1e-3
-    c, d = [1e-6 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
+    a, b = 5,1e-3
+    c, d = [1e-5 * np.ones(R[d]) for d in range(D+1)], [1e-6 * np.ones(R[d]) for d in range(D+1)]
     g, h = [1e-6 * np.ones(M[d]) for d in range(D)], [1e-6 * np.ones(M[d]) for d in range(D)]
 
     BTTKM = TT_model.BTTKM(D, R, M, pure_power_features_full, scale=1)
@@ -72,7 +72,7 @@ for i in range(10):
                 max_iter=50,
                 plotting=False,
                 convergence_bound=1e-4,
-                fm_bias=0.3,
+                fm_bias=0.35,
                 lambda_update=True,
                 delta_update=True,
                 rank_pruning=True,

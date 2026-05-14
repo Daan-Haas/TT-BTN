@@ -126,8 +126,8 @@ class BTTKM:
                 print(np.linalg.norm(G_gt[d]), np.linalg.norm(self.feature_map[d]), np.linalg.norm(self.G_lt))
                 self.W[d] = vectorized_W.reshape((self.R[d], self.M[d], self.R[d+1]), order='F')
 
-                self.H_lt = self.forward_H_one_step(self.H_lt, d+1)
-                self.G_lt = self.forward_G_one_step(self.G_lt, d+1)
+                self.H_lt = self.forward_H_one_step(self.H_lt, d)
+                self.G_lt = self.forward_G_one_step(self.G_lt, d)
                 W_norm += np.linalg.norm(self.W[d])
 
             # # posterior update delta
